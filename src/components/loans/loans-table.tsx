@@ -15,6 +15,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -92,6 +99,12 @@ export function LoansTable({
     }
   }
 
+  const handleStatusChange = (loanId: string, newStatus: string) => {
+    if (onStatusChange) {
+      onStatusChange(loanId, newStatus)
+    }
+  }
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-PE', {
       style: 'currency',
@@ -130,10 +143,9 @@ export function LoansTable({
               <TableHead>Monto</TableHead>
               <TableHead>Pagado</TableHead>
               <TableHead>Saldo</TableHead>
-              <TableHead>Estado</TableHead>
               <TableHead>Progreso</TableHead>
+              <TableHead>Estado</TableHead>
               <TableHead>Vencimiento</TableHead>
-              <TableHead>Garantía</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -174,11 +186,6 @@ export function LoansTable({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={overdue && loan.status === 'ACTIVE' ? 'destructive' : statusInfo.variant}>
-                      {overdue && loan.status === 'ACTIVE' ? 'Vencido' : statusInfo.label}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
                     <div className="flex flex-col space-y-1">
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
@@ -195,22 +202,49 @@ export function LoansTable({
                     </div>
                   </TableCell>
                   <TableCell>
+                    <Select 
+                      value={loan.status} 
+                      onValueChange={(newStatus) => handleStatusChange(loan.id, newStatus)}
+                      disabled={!onStatusChange}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue>
+                          <Badge variant={statusInfo.variant}>
+                            {statusInfo.label}
+                          </Badge>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ACTIVE">
+                          <div className="flex items-center">
+                            <Badge variant="default">Activo</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="PAID">
+                          <div className="flex items-center">
+                            <Badge variant="secondary">Pagado</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="OVERDUE">
+                          <div className="flex items-center">
+                            <Badge variant="destructive">Vencido</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="CANCELLED">
+                          <div className="flex items-center">
+                            <Badge variant="outline">Cancelado</Badge>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
                     <div className={overdue ? 'text-red-600 font-medium' : ''}>
                       {format(new Date(loan.dueDate), 'dd/MM/yyyy', { locale: es })}
                     </div>
                     {overdue && loan.status === 'ACTIVE' && (
                       <div className="text-xs text-red-500">¡Vencido!</div>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-[120px]">
-                      <div className="truncate text-sm" title={loan.guarantee.name}>
-                        {loan.guarantee.name}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatCurrency(loan.guarantee.value)}
-                      </div>
-                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-1">

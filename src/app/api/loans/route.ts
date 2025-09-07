@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
     const status = searchParams.get('status') || ''
+    const clientId = searchParams.get('clientId') || ''
 
     const skip = (page - 1) * limit
 
@@ -34,6 +35,10 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       where.status = status
+    }
+
+    if (clientId) {
+      where.clientId = clientId
     }
 
     const [loans, total] = await Promise.all([
@@ -104,8 +109,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Tasa de interés no válida' }, { status: 404 })
     }
 
-    if (!guarantee || guarantee.status !== 'ACTIVE') {
-      return NextResponse.json({ error: 'Garantía no disponible' }, { status: 404 })
+    if (!guarantee) {
+      return NextResponse.json({ error: 'Garantía no encontrada' }, { status: 404 })
     }
 
     // Check if client has any active loans
@@ -152,11 +157,7 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Update guarantee status to USED
-      await tx.guarantee.update({
-        where: { id: guaranteeId },
-        data: { status: 'USED' },
-      })
+      // Note: Guarantee is now linked to loan, no status field needed
 
       return newLoan
     })

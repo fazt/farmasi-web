@@ -72,7 +72,7 @@ export function PaymentForm({ onSubmit, isLoading }: PaymentFormProps) {
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       loanId: '',
-      amount: 0,
+      amount: '' as any,
       paymentDate: new Date(),
     },
   })
@@ -118,7 +118,7 @@ export function PaymentForm({ onSubmit, isLoading }: PaymentFormProps) {
     // Set suggested payment amount (weekly payment or remaining balance, whichever is less)
     if (loan) {
       const suggestedAmount = Math.min(loan.weeklyPayment, loan.balance)
-      form.setValue('amount', suggestedAmount)
+      form.setValue('amount', suggestedAmount.toString() as any)
     }
   }
 
@@ -325,8 +325,6 @@ export function PaymentForm({ onSubmit, isLoading }: PaymentFormProps) {
                           max={selectedLoan.balance}
                           placeholder="0.00"
                           {...field}
-                          value={field.value || ''}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormDescription>
@@ -341,7 +339,7 @@ export function PaymentForm({ onSubmit, isLoading }: PaymentFormProps) {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => form.setValue('amount', selectedLoan.weeklyPayment)}
+                    onClick={() => form.setValue('amount', selectedLoan.weeklyPayment.toString() as any)}
                     disabled={selectedLoan.weeklyPayment > selectedLoan.balance}
                   >
                     Cuota Semanal ({formatCurrency(selectedLoan.weeklyPayment)})
@@ -349,7 +347,7 @@ export function PaymentForm({ onSubmit, isLoading }: PaymentFormProps) {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => form.setValue('amount', selectedLoan.balance)}
+                    onClick={() => form.setValue('amount', selectedLoan.balance.toString() as any)}
                   >
                     Pago Total ({formatCurrency(selectedLoan.balance)})
                   </Button>

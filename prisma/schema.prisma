@@ -87,6 +87,7 @@ model Client {
   updatedAt       DateTime  @updatedAt
   
   loans           Loan[]
+  guaranteedLoans Loan[]    @relation("ClientGuarantor")
   contracts       Contract[]
   
   @@map("clients")
@@ -107,26 +108,41 @@ model InterestRate {
 }
 
 model Guarantee {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
-  value       Decimal  @db.Decimal(10, 2)
-  photo       String?
-  description String?
-  status      GuaranteeStatus @default(ACTIVE)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  value       Decimal   @db.Decimal(10, 2)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   
+  photos      GuaranteePhoto[]
   loans       Loan[]
   contracts   Contract[]
   
   @@map("guarantees")
 }
 
+model GuaranteePhoto {
+  id          String    @id @default(cuid())
+  guaranteeId String
+  url         String
+  filename    String
+  size        Int?
+  mimeType    String?
+  uploadedAt  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  guarantee   Guarantee @relation(fields: [guaranteeId], references: [id], onDelete: Cascade)
+  
+  @@map("guarantee_photos")
+}
+
 model Loan {
   id              String     @id @default(cuid())
   clientId        String
   interestRateId  String
-  guaranteeId     String
+  guaranteeId     String?
+  guarantorId     String?
   amount          Decimal    @db.Decimal(10, 2)
   weeklyPayment   Decimal    @db.Decimal(10, 2)
   totalAmount     Decimal    @db.Decimal(10, 2)
@@ -141,7 +157,8 @@ model Loan {
   
   client          Client       @relation(fields: [clientId], references: [id])
   interestRate    InterestRate @relation(fields: [interestRateId], references: [id])
-  guarantee       Guarantee    @relation(fields: [guaranteeId], references: [id])
+  guarantee       Guarantee?   @relation(fields: [guaranteeId], references: [id])
+  guarantor       Client?      @relation("ClientGuarantor", fields: [guarantorId], references: [id])
   payments        Payment[]
   contracts       Contract[]
   
@@ -173,6 +190,7 @@ model Contract {
   installments Int           @default(6)
   status      ContractStatus @default(ACTIVE)
   signature   String?
+  content     String?        @db.Text
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   
@@ -181,6 +199,19 @@ model Contract {
   guarantee   Guarantee      @relation(fields: [guaranteeId], references: [id])
   
   @@map("contracts")
+}
+
+model WhatsAppTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  content   String   @db.Text
+  category  String
+  variables String[]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("whatsapp_templates")
 }
 
 enum Role {

@@ -20,9 +20,6 @@ interface Guarantee {
   id: string
   name: string
   value: number
-  photo?: string | null
-  description?: string | null
-  status: 'ACTIVE' | 'INACTIVE' | 'USED'
   createdAt: Date
   _count: {
     loans: number
@@ -41,7 +38,6 @@ export default function GuaranteesPage() {
   const [guarantees, setGuarantees] = useState<Guarantee[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
   const [pagination, setPagination] = useState<PaginationData>({
     page: 1,
     limit: 10,
@@ -50,14 +46,13 @@ export default function GuaranteesPage() {
   })
   const router = useRouter()
 
-  const fetchGuarantees = async (page = 1, searchTerm = '', status = '') => {
+  const fetchGuarantees = async (page = 1, searchTerm = '') => {
     try {
       setLoading(true)
       const params = new URLSearchParams({
         page: page.toString(),
         limit: pagination.limit.toString(),
         search: searchTerm,
-        status: status,
       })
 
       const response = await fetch(`/api/guarantees?${params}`)
@@ -81,12 +76,7 @@ export default function GuaranteesPage() {
   }, [])
 
   const handleSearch = () => {
-    fetchGuarantees(1, search, statusFilter === 'ALL' ? '' : statusFilter)
-  }
-
-  const handleStatusFilter = (status: string) => {
-    setStatusFilter(status)
-    fetchGuarantees(1, search, status === 'ALL' ? '' : status)
+    fetchGuarantees(1, search)
   }
 
 
@@ -97,7 +87,7 @@ export default function GuaranteesPage() {
       })
 
       if (response.ok) {
-        fetchGuarantees(pagination.page, search, statusFilter === 'ALL' ? '' : statusFilter)
+        fetchGuarantees(pagination.page, search)
       } else {
         const error = await response.json()
         console.error('Error deleting guarantee:', error)
@@ -130,14 +120,10 @@ export default function GuaranteesPage() {
   }
 
   // Calculate statistics
-  const stats = guarantees.reduce(
-    (acc, guarantee) => {
-      acc.totalValue += guarantee.value
-      acc.counts[guarantee.status] = (acc.counts[guarantee.status] || 0) + 1
-      return acc
-    },
-    { totalValue: 0, counts: {} as Record<string, number> }
-  )
+  const stats = {
+    totalValue: guarantees.reduce((acc, guarantee) => acc + Number(guarantee.value), 0),
+    totalCount: guarantees.length
+  }
 
   return (
     <DashboardLayout>
@@ -159,7 +145,7 @@ export default function GuaranteesPage() {
               <Shield className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{guarantees.length}</div>
+              <div className="text-2xl font-bold">{stats.totalCount}</div>
               <p className="text-xs text-muted-foreground">
                 Garantías registradas
               </p>
@@ -179,36 +165,6 @@ export default function GuaranteesPage() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Valor total de garantías
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Activas
-              </CardTitle>
-              <Shield className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.counts.ACTIVE || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Garantías disponibles
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                En Uso
-              </CardTitle>
-              <Shield className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.counts.USED || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Garantías utilizadas
               </p>
             </CardContent>
           </Card>
@@ -237,18 +193,6 @@ export default function GuaranteesPage() {
               </div>
               
               <div className="flex items-center space-x-2">
-                <Select value={statusFilter} onValueChange={handleStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filtrar por estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">Todos los estados</SelectItem>
-                    <SelectItem value="ACTIVE">Activas</SelectItem>
-                    <SelectItem value="INACTIVE">Inactivas</SelectItem>
-                    <SelectItem value="USED">En Uso</SelectItem>
-                  </SelectContent>
-                </Select>
-                
                 <Button onClick={handleNewGuarantee}>
                   <Plus className="h-4 w-4 mr-2" />
                   Nueva Garantía
@@ -268,7 +212,7 @@ export default function GuaranteesPage() {
               <div className="flex justify-center space-x-2 mt-4">
                 <Button
                   variant="outline"
-                  onClick={() => fetchGuarantees(pagination.page - 1, search, statusFilter === 'ALL' ? '' : statusFilter)}
+                  onClick={() => fetchGuarantees(pagination.page - 1, search)}
                   disabled={pagination.page <= 1}
                 >
                   Anterior
@@ -278,7 +222,7 @@ export default function GuaranteesPage() {
                 </span>
                 <Button
                   variant="outline"
-                  onClick={() => fetchGuarantees(pagination.page + 1, search, statusFilter === 'ALL' ? '' : statusFilter)}
+                  onClick={() => fetchGuarantees(pagination.page + 1, search)}
                   disabled={pagination.page >= pagination.pages}
                 >
                   Siguiente

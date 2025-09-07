@@ -1,140 +1,47 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Plus, Calculator } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Calculator } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { InterestRatesTable } from '@/components/interest-rates/interest-rates-table'
+import { InterestRatesClient } from '@/components/interest-rates/interest-rates-client'
+import { prisma } from '@/lib/prisma'
 
-interface InterestRate {
-  id: string
-  loanAmount: number
-  weeklyPayment: number
-  weeksCount: number
-  isActive: boolean
-  createdAt: Date
-  _count: {
-    loans: number
-  }
-}
+export default async function InterestRatesPage() {
+  // Fetch initial data on server side
+  const interestRates = await prisma.interestRate.findMany({
+    include: {
+      _count: {
+        select: {
+          loans: true
+        }
+      }
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    take: 10
+  })
 
-interface PaginationData {
-  page: number
-  limit: number
-  total: number
-  pages: number
-}
+  const totalRates = await prisma.interestRate.count()
 
-export default function InterestRatesPage() {
-  const [interestRates, setInterestRates] = useState<InterestRate[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showActiveOnly, setShowActiveOnly] = useState(false)
-  const [pagination, setPagination] = useState<PaginationData>({
+  const pagination = {
     page: 1,
     limit: 10,
-    total: 0,
-    pages: 0,
-  })
-  const router = useRouter()
-
-  const fetchInterestRates = async (page = 1, activeOnly = false) => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: pagination.limit.toString(),
-        active: activeOnly.toString(),
-      })
-
-      const response = await fetch(`/api/interest-rates?${params}`)
-      const data = await response.json()
-
-      if (response.ok) {
-        setInterestRates(data.interestRates)
-        setPagination(data.pagination)
-      } else {
-        console.error('Error fetching interest rates:', data.error)
-      }
-    } catch (error) {
-      console.error('Error fetching interest rates:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchInterestRates(1, showActiveOnly)
-  }, [showActiveOnly])
-
-
-  const handleDeleteRate = async (id: string) => {
-    try {
-      const response = await fetch(`/api/interest-rates/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        fetchInterestRates(pagination.page, showActiveOnly)
-      } else {
-        const error = await response.json()
-        console.error('Error deleting interest rate:', error)
-        alert(error.error || 'Error al eliminar la tasa de interés')
-      }
-    } catch (error) {
-      console.error('Error deleting interest rate:', error)
-      alert('Error al eliminar la tasa de interés')
-    }
-  }
-
-  const handleToggleStatus = async (id: string, isActive: boolean) => {
-    try {
-      const rate = interestRates.find(r => r.id === id)
-      if (!rate) return
-
-      const response = await fetch(`/api/interest-rates/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          loanAmount: rate.loanAmount,
-          weeklyPayment: rate.weeklyPayment,
-          weeksCount: rate.weeksCount,
-          isActive,
-        }),
-      })
-
-      if (response.ok) {
-        fetchInterestRates(pagination.page, showActiveOnly)
-      } else {
-        const error = await response.json()
-        console.error('Error toggling status:', error)
-        alert(error.error || 'Error al cambiar el estado')
-      }
-    } catch (error) {
-      console.error('Error toggling status:', error)
-      alert('Error al cambiar el estado')
-    }
-  }
-
-  const handleEditRate = (rate: InterestRate) => {
-    router.push(`/dashboard/interest-rates/${rate.id}/edit`)
-  }
-
-  const handleNewRate = () => {
-    router.push('/dashboard/interest-rates/new')
+    total: totalRates,
+    pages: Math.ceil(totalRates / 10)
   }
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tasas de Interés</h1>
-          <p className="text-muted-foreground">
-            Administra las tasas de interés para los préstamos del sistema
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Tasas de Interés</h1>
+            <p className="text-muted-foreground">
+              Administra las tasas de interés para los préstamos del sistema
+            </p>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Total: {totalRates} tasa(s) de interés
+          </div>
         </div>
 
         <Card>
@@ -148,50 +55,10 @@ export default function InterestRatesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="active-only"
-                  checked={showActiveOnly}
-                  onCheckedChange={setShowActiveOnly}
-                />
-                <Label htmlFor="active-only">Solo mostrar tasas activas</Label>
-              </div>
-              <Button onClick={handleNewRate}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nueva Tasa de Interés
-              </Button>
-            </div>
-
-            <InterestRatesTable
-              interestRates={interestRates}
-              onEdit={handleEditRate}
-              onDelete={handleDeleteRate}
-              onToggleStatus={handleToggleStatus}
-              isLoading={loading}
+            <InterestRatesClient 
+              initialRates={interestRates} 
+              initialPagination={pagination}
             />
-
-            {pagination.pages > 1 && (
-              <div className="flex justify-center space-x-2 mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => fetchInterestRates(pagination.page - 1, showActiveOnly)}
-                  disabled={pagination.page <= 1}
-                >
-                  Anterior
-                </Button>
-                <span className="flex items-center px-4">
-                  Página {pagination.page} de {pagination.pages}
-                </span>
-                <Button
-                  variant="outline"
-                  onClick={() => fetchInterestRates(pagination.page + 1, showActiveOnly)}
-                  disabled={pagination.page >= pagination.pages}
-                >
-                  Siguiente
-                </Button>
-              </div>
-            )}
           </CardContent>
         </Card>
 

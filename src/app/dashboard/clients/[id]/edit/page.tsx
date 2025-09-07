@@ -145,26 +145,38 @@ export default function EditClientPage({ params }: EditClientPageProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Información del Cliente</CardTitle>
-            <CardDescription>
-              Actualiza los datos del cliente. Los campos marcados con (*) son obligatorios.
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Información del Cliente</CardTitle>
+                <CardDescription>
+                  Actualiza los datos del cliente. Los campos marcados con (*) son obligatorios.
+                </CardDescription>
+              </div>
+              <div className="flex space-x-4">
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  form="client-form"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Actualizando...' : 'Actualizar Cliente'}
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <ClientForm
               initialData={client}
               onSubmit={handleUpdateClient}
               isLoading={isSubmitting}
+              formId="client-form"
             />
-            <div className="flex justify-end space-x-4 mt-6 pt-6 border-t">
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>

@@ -11,6 +11,7 @@ export const contractSchema = z.object({
   installments: z.number().min(1, 'Debe tener al menos una cuota').default(6),
   status: z.enum(['ACTIVE', 'COMPLETED', 'CANCELLED']).default('ACTIVE'),
   signature: z.string().optional(),
+  content: z.string().optional(),
 })
 
 export type ContractFormData = z.infer<typeof contractSchema>

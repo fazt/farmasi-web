@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
-    const status = searchParams.get('status') || ''
 
     const skip = (page - 1) * limit
 
@@ -25,12 +24,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' as const } },
-        { description: { contains: search, mode: 'insensitive' as const } },
       ]
-    }
-
-    if (status) {
-      where.status = status
     }
 
     const [guarantees, total] = await Promise.all([
@@ -78,17 +72,51 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    
+    // Validar los datos con Zod
     const validatedData = guaranteeSchema.parse(body)
 
-    const guarantee = await prisma.guarantee.create({
-      data: validatedData,
-    })
+    // Separar los datos que van directamente a la base de datos
+    const { photos, ...guaranteeData } = validatedData
 
+    // Crear la garantía en la base de datos (sin el campo photos)
+    const guarantee = await prisma.guarantee.create({
+      data: guaranteeData,
+    })
+    
     return NextResponse.json(guarantee)
-  } catch (error) {
+    
+  } catch (error: any) {
     console.error('Error creating guarantee:', error)
+    
+    // Errores de validación de Zod
+    if (error.name === 'ZodError') {
+      const validationErrors = error.errors.map((err: any) => ({
+        field: err.path.join('.'),
+        message: err.message
+      }))
+      
+      return NextResponse.json(
+        { 
+          error: 'Errores de validación', 
+          details: validationErrors,
+          message: validationErrors.map((e: any) => `${e.field}: ${e.message}`).join(', ')
+        },
+        { status: 400 }
+      )
+    }
+    
+    // Errores de Prisma
+    if (error.code) {
+      return NextResponse.json(
+        { error: `Error de base de datos: ${error.message}` },
+        { status: 400 }
+      )
+    }
+    
+    // Error genérico
     return NextResponse.json(
-      { error: 'Error al crear la garantía' },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     )
   }

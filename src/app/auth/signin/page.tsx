@@ -45,12 +45,12 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           {/* Logo and Header */}
           <div className="text-center mb-8">
-            <div className="mx-auto mb-6 h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg">
+            <div className="mx-auto mb-6 h-20 w-20 rounded-2xl bg-gradient-to-br from-[#FF5B67] to-[#FF4755] flex items-center justify-center shadow-lg">
               <Building2 className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -86,7 +86,7 @@ export default function SignInPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="correo@ejemplo.com"
-                      className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="pl-10 h-12 border-gray-300 focus:border-[#FF5B67] focus:ring-[#FF5B67]"
                       required
                       disabled={loading}
                     />
@@ -105,7 +105,7 @@ export default function SignInPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Tu contraseña"
-                      className="pl-10 pr-12 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="pl-10 pr-12 h-12 border-gray-300 focus:border-[#FF5B67] focus:ring-[#FF5B67]"
                       required
                       disabled={loading}
                     />
@@ -141,7 +141,7 @@ export default function SignInPage() {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 font-medium text-white shadow-lg"
+                  className="w-full h-12 bg-gradient-to-r from-[#FF5B67] to-[#FF4755] hover:from-[#FF4755] hover:to-[#E53E3A] font-medium text-white shadow-lg"
                   disabled={loading}
                 >
                   {loading ? (

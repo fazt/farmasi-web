@@ -25,14 +25,11 @@ interface InterestRateFormProps {
 }
 
 export function InterestRateForm({ initialData, onSubmit, isLoading }: InterestRateFormProps) {
-  const [calculatedPayment, setCalculatedPayment] = useState<number | null>(null)
-  const [calculatedAmount, setCalculatedAmount] = useState<number | null>(null)
-
   const form = useForm<InterestRateFormData>({
     resolver: zodResolver(interestRateSchema),
     defaultValues: {
-      loanAmount: initialData?.loanAmount || 0,
-      weeklyPayment: initialData?.weeklyPayment || 0,
+      loanAmount: initialData?.loanAmount || '' as any,
+      weeklyPayment: initialData?.weeklyPayment || '' as any,
       weeksCount: initialData?.weeksCount || 6,
       isActive: initialData?.isActive ?? true,
     },
@@ -42,91 +39,6 @@ export function InterestRateForm({ initialData, onSubmit, isLoading }: InterestR
   const weeklyPayment = form.watch('weeklyPayment')
   const weeksCount = form.watch('weeksCount')
 
-  // Calculate weekly payment when loan amount changes
-  useEffect(() => {
-    if (loanAmount && weeksCount && loanAmount !== calculatedAmount) {
-      // Based on the examples in README: calculate interest and payment
-      const totalPayment = calculateTotalPayment(loanAmount)
-      const weekly = totalPayment / weeksCount
-      setCalculatedPayment(Math.round(weekly * 100) / 100)
-      setCalculatedAmount(loanAmount)
-    }
-  }, [loanAmount, weeksCount, calculatedAmount])
-
-  // Calculate loan amount when weekly payment changes
-  const calculateLoanAmountFromPayment = (payment: number): number => {
-    // Reverse calculation based on the interest rates
-    const totalPayment = payment * weeksCount
-    
-    // Try to find the closest loan amount based on known rates
-    const knownRates = [
-      { amount: 500, payment: 105 },
-      { amount: 600, payment: 110 },
-      { amount: 700, payment: 145 },
-      { amount: 800, payment: 165 },
-      { amount: 1000, payment: 210 },
-      { amount: 1500, payment: 320 },
-    ]
-    
-    // Find the rate that matches the payment or interpolate
-    for (const rate of knownRates) {
-      if (Math.abs(rate.payment - payment) < 5) {
-        return rate.amount
-      }
-    }
-    
-    // If no exact match, do a rough calculation
-    // Average interest rate is around 20-25% for 6 weeks
-    return Math.round((totalPayment / 1.25) * 100) / 100
-  }
-
-  const calculateTotalPayment = (amount: number): number => {
-    // Based on the examples in README, calculate total payment
-    const knownRates = [
-      { amount: 500, payment: 105 },
-      { amount: 600, payment: 110 },
-      { amount: 700, payment: 145 },
-      { amount: 800, payment: 165 },
-      { amount: 1000, payment: 210 },
-      { amount: 1500, payment: 320 },
-    ]
-    
-    // Find exact match
-    const exactMatch = knownRates.find(rate => rate.amount === amount)
-    if (exactMatch) {
-      return exactMatch.payment * 6
-    }
-    
-    // Interpolate or calculate based on pattern
-    if (amount <= 600) {
-      return amount * 1.26 // ~26% for lower amounts
-    } else if (amount <= 1000) {
-      return amount * 1.24 // ~24% for medium amounts
-    } else {
-      return amount * 1.28 // ~28% for higher amounts
-    }
-  }
-
-  const handleLoanAmountChange = (value: string) => {
-    const numValue = parseFloat(value) || 0
-    form.setValue('loanAmount', numValue)
-    
-    if (numValue > 0) {
-      const totalPayment = calculateTotalPayment(numValue)
-      const weekly = totalPayment / weeksCount
-      form.setValue('weeklyPayment', Math.round(weekly * 100) / 100)
-    }
-  }
-
-  const handleWeeklyPaymentChange = (value: string) => {
-    const numValue = parseFloat(value) || 0
-    form.setValue('weeklyPayment', numValue)
-    
-    if (numValue > 0) {
-      const estimatedAmount = calculateLoanAmountFromPayment(numValue)
-      form.setValue('loanAmount', estimatedAmount)
-    }
-  }
 
   const handleSubmit = async (data: InterestRateFormData) => {
     try {
@@ -136,9 +48,13 @@ export function InterestRateForm({ initialData, onSubmit, isLoading }: InterestR
     }
   }
 
-  const totalPayment = loanAmount * weeksCount ? weeklyPayment * weeksCount : 0
-  const interestAmount = totalPayment - loanAmount
-  const interestRate = loanAmount > 0 ? (interestAmount / loanAmount) * 100 : 0
+  const loanAmountNum = Number(loanAmount) || 0
+  const weeklyPaymentNum = Number(weeklyPayment) || 0
+  const weeksCountNum = Number(weeksCount) || 6
+
+  const totalPayment = loanAmountNum > 0 && weeklyPaymentNum > 0 ? weeklyPaymentNum * weeksCountNum : 0
+  const interestAmount = totalPayment - loanAmountNum
+  const interestRate = loanAmountNum > 0 ? (interestAmount / loanAmountNum) * 100 : 0
 
   return (
     <div className="space-y-6">
@@ -165,8 +81,6 @@ export function InterestRateForm({ initialData, onSubmit, isLoading }: InterestR
                           step="0.01"
                           placeholder="500.00"
                           {...field}
-                          value={field.value || ''}
-                          onChange={(e) => handleLoanAmountChange(e.target.value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -186,8 +100,6 @@ export function InterestRateForm({ initialData, onSubmit, isLoading }: InterestR
                           step="0.01"
                           placeholder="105.00"
                           {...field}
-                          value={field.value || ''}
-                          onChange={(e) => handleWeeklyPaymentChange(e.target.value)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -207,8 +119,6 @@ export function InterestRateForm({ initialData, onSubmit, isLoading }: InterestR
                           min="1"
                           max="52"
                           {...field}
-                          value={field.value || 6}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 6)}
                         />
                       </FormControl>
                       <FormDescription>
@@ -241,7 +151,7 @@ export function InterestRateForm({ initialData, onSubmit, isLoading }: InterestR
                 />
               </div>
 
-              {loanAmount > 0 && weeklyPayment > 0 && (
+              {loanAmountNum > 0 && weeklyPaymentNum > 0 && (
                 <Card className="bg-muted/50">
                   <CardHeader>
                     <CardTitle className="text-lg">Resumen del Préstamo</CardTitle>
@@ -249,15 +159,15 @@ export function InterestRateForm({ initialData, onSubmit, isLoading }: InterestR
                   <CardContent className="space-y-2">
                     <div className="flex justify-between">
                       <span>Monto del préstamo:</span>
-                      <span className="font-medium">S/. {loanAmount.toFixed(2)}</span>
+                      <span className="font-medium">S/. {loanAmountNum.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Pago semanal:</span>
-                      <span className="font-medium">S/. {weeklyPayment.toFixed(2)}</span>
+                      <span className="font-medium">S/. {weeklyPaymentNum.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Número de semanas:</span>
-                      <span className="font-medium">{weeksCount}</span>
+                      <span className="font-medium">{weeksCountNum}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Total a pagar:</span>

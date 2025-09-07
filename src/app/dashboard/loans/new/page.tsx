@@ -10,6 +10,7 @@ import { LoanForm } from '@/components/loans/loan-form'
 
 export default function NewLoanPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
   const handleCreateLoan = async (data: any) => {
@@ -40,10 +41,15 @@ export default function NewLoanPage() {
     router.push('/dashboard/loans')
   }
 
+  const handleDataLoaded = () => {
+    setIsLoading(false)
+  }
+
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col min-h-[calc(100vh-10rem)]">
+        <div className="flex items-center gap-4 mb-6">
           <Button
             variant="ghost"
             size="icon"
@@ -59,29 +65,26 @@ export default function NewLoanPage() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Información del Préstamo</CardTitle>
-            <CardDescription>
-              Completa los datos del nuevo préstamo. Los campos marcados con (*) son obligatorios.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LoanForm
-              onSubmit={handleCreateLoan}
-              isLoading={isSubmitting}
-            />
-            <div className="flex justify-end space-x-4 mt-6 pt-6 border-t">
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-full max-w-2xl">
+            <Card>
+              <CardHeader>
+                <CardTitle>Información del Préstamo</CardTitle>
+                <CardDescription>
+                  Completa los datos del nuevo préstamo. Los campos marcados con (*) son obligatorios.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <LoanForm
+                  onSubmit={handleCreateLoan}
+                  isLoading={isSubmitting}
+                  renderSkeleton={isLoading}
+                  onDataLoaded={handleDataLoaded}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   )

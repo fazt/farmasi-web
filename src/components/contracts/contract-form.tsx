@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { WYSIWYGEditor } from '@/components/ui/wysiwyg-editor'
 import { contractSchema, type ContractFormData } from '@/lib/validations/contract'
 
 interface Loan {
@@ -82,6 +83,39 @@ export function ContractForm({ initialData, onSubmit, isLoading }: ContractFormP
       installments: initialData?.installments || 6,
       status: initialData?.status || 'ACTIVE',
       signature: initialData?.signature || '',
+      content: initialData?.content || `<h2>CONTRATO DE PRÉSTAMO</h2>
+
+<p>En la ciudad de [CIUDAD], a los [DÍA] días del mes de [MES] de [AÑO], se celebra el presente CONTRATO DE PRÉSTAMO entre:</p>
+
+<p><strong>EL PRESTAMISTA:</strong><br>
+[NOMBRE DE LA EMPRESA]<br>
+RUC: [RUC]<br>
+Domicilio: [DIRECCIÓN]</p>
+
+<p><strong>EL PRESTATARIO:</strong><br>
+Nombres y Apellidos: [NOMBRE_CLIENTE]<br>
+DNI: [DNI_CLIENTE]<br>
+Domicilio: [DIRECCIÓN_CLIENTE]<br>
+Teléfono: [TELÉFONO_CLIENTE]</p>
+
+<h3>PRIMERA: OBJETO DEL CONTRATO</h3>
+<p>El PRESTAMISTA otorga al PRESTATARIO un préstamo por la suma de [MONTO_PRÉSTAMO] soles ([MONTO_LETRAS]).</p>
+
+<h3>SEGUNDA: PLAZO Y FORMA DE PAGO</h3>
+<p>El préstamo será devuelto en [NÚMERO_CUOTAS] cuotas semanales de [MONTO_CUOTA] soles cada una, iniciando el [FECHA_INICIO] y finalizando el [FECHA_FIN].</p>
+
+<h3>TERCERA: INTERESES</h3>
+<p>El préstamo generará intereses por la suma total de [MONTO_INTERESES] soles.</p>
+
+<h3>CUARTA: GARANTÍA</h3>
+<p>Como garantía del cumplimiento de las obligaciones contraídas, el PRESTATARIO entrega en garantía: [DESCRIPCIÓN_GARANTÍA] valorizada en [VALOR_GARANTÍA] soles.</p>
+
+<h3>QUINTA: INCUMPLIMIENTO</h3>
+<p>En caso de incumplimiento de pago, el PRESTAMISTA podrá ejecutar la garantía y exigir el pago total de la deuda.</p>
+
+<p><br><br>
+_____________________&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_____________________<br>
+PRESTAMISTA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PRESTATARIO</p>`,
     },
   })
 
@@ -129,12 +163,12 @@ export function ContractForm({ initialData, onSubmit, isLoading }: ContractFormP
 
     setSelectedLoan(loan)
     
-    // Auto-fill form with loan data
+    // Auto-fill form with loan data - ensure amounts are numbers
     form.setValue('loanId', loanId)
     form.setValue('clientId', loan.client.id)
     form.setValue('guaranteeId', loan.guarantee.id)
-    form.setValue('amount', loan.amount)
-    form.setValue('interest', loan.totalAmount - loan.amount)
+    form.setValue('amount', Number(loan.amount))
+    form.setValue('interest', Number(loan.totalAmount) - Number(loan.amount))
     form.setValue('installments', loan.interestRate.weeksCount)
     form.setValue('startDate', new Date(loan.loanDate))
     form.setValue('endDate', new Date(loan.dueDate))
@@ -291,7 +325,7 @@ export function ContractForm({ initialData, onSubmit, isLoading }: ContractFormP
                             step="0.01"
                             readOnly
                             {...field}
-                            value={field.value || ''}
+                            value={field.value?.toString() || ''}
                             onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                           />
                         </FormControl>
@@ -315,7 +349,7 @@ export function ContractForm({ initialData, onSubmit, isLoading }: ContractFormP
                             step="0.01"
                             readOnly
                             {...field}
-                            value={field.value || ''}
+                            value={field.value?.toString() || ''}
                             onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                           />
                         </FormControl>
@@ -377,6 +411,29 @@ export function ContractForm({ initialData, onSubmit, isLoading }: ContractFormP
                     )}
                   />
                 </div>
+
+                {/* Contract Content */}
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contenido del Contrato</FormLabel>
+                      <FormControl>
+                        <WYSIWYGEditor
+                          content={field.value || ''}
+                          onChange={field.onChange}
+                          placeholder="Escriba el contenido del contrato aquí..."
+                          className="min-h-[400px]"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Use variables como [NOMBRE_CLIENTE], [MONTO_PRÉSTAMO], etc. para datos dinámicos
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {/* Summary */}
                 <Card className="bg-muted/30">

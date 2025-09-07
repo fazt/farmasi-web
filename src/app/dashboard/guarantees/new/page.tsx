@@ -16,6 +16,8 @@ export default function NewGuaranteePage() {
   const handleCreateGuarantee = async (data: GuaranteeFormData) => {
     setIsSubmitting(true)
     try {
+      console.log('Enviando datos de garantía:', data)
+      
       const response = await fetch('/api/guarantees', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -23,15 +25,25 @@ export default function NewGuaranteePage() {
       })
 
       if (response.ok) {
+        console.log('Garantía creada exitosamente')
         router.push('/dashboard/guarantees')
       } else {
         const error = await response.json()
-        console.error('Error creating guarantee:', error)
-        alert(error.error || 'Error al crear la garantía')
+        console.error('Error del servidor:', error)
+        
+        // Mostrar error más detallado
+        if (error.error) {
+          alert(`Error: ${error.error}`)
+        } else if (error.message) {
+          alert(`Error: ${error.message}`)
+        } else {
+          alert('Error al crear la garantía. Verifique los datos.')
+        }
       }
     } catch (error) {
-      console.error('Error creating guarantee:', error)
-      alert('Error al crear la garantía')
+      console.error('Error de conexión:', error)
+      alert('Error de conexión. Verifique su internet e intente nuevamente.')
+      throw error // Re-throw para que el formulario pueda manejarlo
     } finally {
       setIsSubmitting(false)
     }
@@ -62,25 +74,38 @@ export default function NewGuaranteePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Información de la Garantía</CardTitle>
-            <CardDescription>
-              Completa los datos de la nueva garantía. Los campos marcados con (*) son obligatorios.
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Información de la Garantía</CardTitle>
+                <CardDescription>
+                  Completa los datos de la nueva garantía. Los campos marcados con (*) son obligatorios.
+                </CardDescription>
+              </div>
+              <div className="flex space-x-4">
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  form="guarantee-form"
+                  disabled={isSubmitting}
+                  className="bg-[#FF5B67] hover:bg-[#FF4755] text-white"
+                >
+                  {isSubmitting ? 'Guardando...' : 'Guardar Garantía'}
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <GuaranteeForm
               onSubmit={handleCreateGuarantee}
               isLoading={isSubmitting}
+              formId="guarantee-form"
             />
-            <div className="flex justify-end space-x-4 mt-6 pt-6 border-t">
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>

@@ -1,14 +1,20 @@
 'use client'
 
-import { Moon, Sun } from 'lucide-react'
+import { Moon, Sun, Plus } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 
 export function Header() {
   const { theme, setTheme } = useTheme()
   const { data: session } = useSession()
+  const router = useRouter()
+
+  const handleNewLoan = () => {
+    router.push('/dashboard/loans/new')
+  }
 
   return (
     <header className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -17,6 +23,16 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleNewLoan}
+          className="bg-[#FF5B67] hover:bg-[#FF4755] text-white border-[#FF5B67] hover:border-[#FF4755]"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Nuevo Préstamo
+        </Button>
+
         <Button
           variant="ghost"
           size="icon"

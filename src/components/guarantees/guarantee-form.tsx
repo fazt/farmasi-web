@@ -27,17 +27,16 @@ interface GuaranteeFormProps {
   initialData?: Partial<GuaranteeFormData>
   onSubmit: (data: GuaranteeFormData) => Promise<void>
   isLoading?: boolean
+  formId?: string
 }
 
-export function GuaranteeForm({ initialData, onSubmit, isLoading }: GuaranteeFormProps) {
+export function GuaranteeForm({ initialData, onSubmit, isLoading, formId }: GuaranteeFormProps) {
   const form = useForm<GuaranteeFormData>({
     resolver: zodResolver(guaranteeSchema),
     defaultValues: {
       name: initialData?.name || '',
       value: initialData?.value || 0,
-      photo: initialData?.photo || '',
-      description: initialData?.description || '',
-      status: initialData?.status || 'ACTIVE',
+      photos: [],
     },
   })
 
@@ -46,13 +45,25 @@ export function GuaranteeForm({ initialData, onSubmit, isLoading }: GuaranteeFor
       await onSubmit(data)
     } catch (error) {
       console.error('Error submitting form:', error)
+      
+      // Mostrar error específico si existe
+      if (error instanceof Error) {
+        alert(`Error: ${error.message}`)
+      } else {
+        alert('Error al guardar la garantía. Revise los datos e intente nuevamente.')
+      }
     }
   }
 
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form 
+        id={formId}
+        onSubmit={form.handleSubmit(handleSubmit)} 
+        className="space-y-6"
+      >
+        <div className="space-y-4">
           <FormField
             control={form.control}
             name="name"
@@ -82,8 +93,7 @@ export function GuaranteeForm({ initialData, onSubmit, isLoading }: GuaranteeFor
                     step="0.01"
                     min="0"
                     placeholder="15000.00"
-                    {...field}
-                    value={field.value || ''}
+                    value={field.value?.toString() || ''}
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                   />
                 </FormControl>
@@ -94,80 +104,6 @@ export function GuaranteeForm({ initialData, onSubmit, isLoading }: GuaranteeFor
               </FormItem>
             )}
           />
-
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Estado</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione el estado" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="ACTIVE">Activa</SelectItem>
-                    <SelectItem value="INACTIVE">Inactiva</SelectItem>
-                    <SelectItem value="USED">En Uso</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  Estado actual de la garantía en el sistema
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="photo"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>URL de la Foto</FormLabel>
-                <FormControl>
-                  <Input
-                    type="url"
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>
-                  URL de la imagen de la garantía (opcional)
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Descripción</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Descripción detallada de la garantía, estado, características especiales, etc."
-                  className="min-h-[100px]"
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                Información adicional sobre la garantía (opcional)
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end space-x-4">
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Guardando...' : 'Guardar Garantía'}
-          </Button>
         </div>
       </form>
     </Form>
