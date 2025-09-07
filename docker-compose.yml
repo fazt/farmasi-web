@@ -1,0 +1,9 @@
+services:
+  db:
+    image: postgres:15
+    ports:
+      - 5449:5432
+    environment:
+      POSTGRES_USER: farmasi
+      POSTGRES_PASSWORD: farmasi
+      POSTGRES_DB: farmasi

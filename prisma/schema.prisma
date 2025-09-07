@@ -1,0 +1,221 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          Role      @default(ADMIN)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  accounts      Account[]
+  sessions      Session[]
+  
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+model Client {
+  id              String    @id @default(cuid())
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  address         String?
+  city            String?
+  state           String?
+  documentType    String?
+  documentNumber  String?
+  birthDate       DateTime?
+  gender          Gender?
+  maritalStatus   MaritalStatus?
+  occupation      String?
+  registeredAt    DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  loans           Loan[]
+  contracts       Contract[]
+  
+  @@map("clients")
+}
+
+model InterestRate {
+  id            String   @id @default(cuid())
+  loanAmount    Decimal  @db.Decimal(10, 2)
+  weeklyPayment Decimal  @db.Decimal(10, 2)
+  weeksCount    Int      @default(6)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  loans         Loan[]
+  
+  @@map("interest_rates")
+}
+
+model Guarantee {
+  id          String   @id @default(cuid())
+  name        String
+  value       Decimal  @db.Decimal(10, 2)
+  photo       String?
+  description String?
+  status      GuaranteeStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  loans       Loan[]
+  contracts   Contract[]
+  
+  @@map("guarantees")
+}
+
+model Loan {
+  id              String     @id @default(cuid())
+  clientId        String
+  interestRateId  String
+  guaranteeId     String
+  amount          Decimal    @db.Decimal(10, 2)
+  weeklyPayment   Decimal    @db.Decimal(10, 2)
+  totalAmount     Decimal    @db.Decimal(10, 2)
+  paidAmount      Decimal    @db.Decimal(10, 2) @default(0)
+  balance         Decimal    @db.Decimal(10, 2)
+  status          LoanStatus @default(ACTIVE)
+  loanDate        DateTime   @default(now())
+  dueDate         DateTime
+  completedAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  
+  client          Client       @relation(fields: [clientId], references: [id])
+  interestRate    InterestRate @relation(fields: [interestRateId], references: [id])
+  guarantee       Guarantee    @relation(fields: [guaranteeId], references: [id])
+  payments        Payment[]
+  contracts       Contract[]
+  
+  @@map("loans")
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  loanId    String
+  amount    Decimal  @db.Decimal(10, 2)
+  paymentDate DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  loan      Loan     @relation(fields: [loanId], references: [id])
+  
+  @@map("payments")
+}
+
+model Contract {
+  id          String         @id @default(cuid())
+  clientId    String
+  loanId      String
+  guaranteeId String
+  startDate   DateTime       @default(now())
+  endDate     DateTime
+  amount      Decimal        @db.Decimal(10, 2)
+  interest    Decimal        @db.Decimal(10, 2)
+  installments Int           @default(6)
+  status      ContractStatus @default(ACTIVE)
+  signature   String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  client      Client         @relation(fields: [clientId], references: [id])
+  loan        Loan           @relation(fields: [loanId], references: [id])
+  guarantee   Guarantee      @relation(fields: [guaranteeId], references: [id])
+  
+  @@map("contracts")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+enum GuaranteeStatus {
+  ACTIVE
+  INACTIVE
+  USED
+}
+
+enum LoanStatus {
+  ACTIVE
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum ContractStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
