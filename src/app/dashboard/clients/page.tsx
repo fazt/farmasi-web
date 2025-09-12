@@ -9,13 +9,6 @@ export default async function ClientsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Clientes</h1>
-          <p className="text-muted-foreground">
-            Administra la información de todos los clientes
-          </p>
-        </div>
-
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">

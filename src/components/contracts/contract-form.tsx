@@ -29,6 +29,17 @@ import { Badge } from '@/components/ui/badge'
 import { WYSIWYGEditor } from '@/components/ui/wysiwyg-editor'
 import { contractSchema, type ContractFormData } from '@/lib/validations/contract'
 
+interface Client {
+  id: string
+  firstName: string
+  lastName: string
+  email?: string | null
+  phone?: string | null
+  documentType?: string
+  documentNumber?: string
+  loans: Loan[]
+}
+
 interface Loan {
   id: string
   amount: number
@@ -39,13 +50,6 @@ interface Loan {
   status: string
   loanDate: Date
   dueDate: Date
-  client: {
-    id: string
-    firstName: string
-    lastName: string
-    email?: string | null
-    phone?: string | null
-  }
   interestRate: {
     loanAmount: number
     weeklyPayment: number
@@ -66,24 +70,13 @@ interface ContractFormProps {
 
 export function ContractForm({ initialData, onSubmit, isLoading }: ContractFormProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [searchResults, setSearchResults] = useState<Loan[]>([])
+  const [searchResults, setSearchResults] = useState<Client[]>([])
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null)
   const [searchLoading, setSearchLoading] = useState(false)
 
-  const form = useForm<ContractFormData>({
-    resolver: zodResolver(contractSchema),
-    defaultValues: {
-      clientId: initialData?.clientId || '',
-      loanId: initialData?.loanId || '',
-      guaranteeId: initialData?.guaranteeId || '',
-      startDate: initialData?.startDate || new Date(),
-      endDate: initialData?.endDate || addWeeks(new Date(), 6),
-      amount: initialData?.amount || 0,
-      interest: initialData?.interest || 0,
-      installments: initialData?.installments || 6,
-      status: initialData?.status || 'ACTIVE',
-      signature: initialData?.signature || '',
-      content: initialData?.content || `<h2>CONTRATO DE PRÉSTAMO</h2>
+  // Default contract content if no template is provided
+  const defaultContent = `<h2>CONTRATO DE PRÉSTAMO</h2>
 
 <p>En la ciudad de [CIUDAD], a los [DÍA] días del mes de [MES] de [AÑO], se celebra el presente CONTRATO DE PRÉSTAMO entre:</p>
 
@@ -115,34 +108,54 @@ Teléfono: [TELÉFONO_CLIENTE]</p>
 
 <p><br><br>
 _____________________&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_____________________<br>
-PRESTAMISTA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PRESTATARIO</p>`,
+PRESTAMISTA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PRESTATARIO</p>`
+
+  const form = useForm<ContractFormData>({
+    resolver: zodResolver(contractSchema),
+    defaultValues: {
+      clientId: initialData?.clientId || '',
+      loanId: initialData?.loanId || '',
+      guaranteeId: initialData?.guaranteeId || '',
+      startDate: initialData?.startDate || new Date(),
+      endDate: initialData?.endDate || addWeeks(new Date(), 6),
+      amount: initialData?.amount || 0,
+      interest: initialData?.interest || 0,
+      installments: initialData?.installments || 6,
+      status: initialData?.status || 'ACTIVE',
+      signature: initialData?.signature || '',
+      content: initialData?.content || defaultContent,
     },
   })
 
-  const searchLoans = async (term: string) => {
+  // Update form content when template content changes
+  useEffect(() => {
+    if (initialData?.content) {
+      form.setValue('content', initialData.content)
+    }
+  }, [initialData?.content, form])
+
+  const searchClients = async (term: string) => {
     if (!term.trim()) {
       setSearchResults([])
+      setSelectedClient(null)
+      setSelectedLoan(null)
       return
     }
 
     setSearchLoading(true)
     try {
-      const response = await fetch(`/api/loans/search?search=${encodeURIComponent(term)}`)
+      const response = await fetch(`/api/clients?search=${encodeURIComponent(term)}&includeLoans=true`)
       const data = await response.json()
       
       if (response.ok) {
-        // Filter loans that don't have contracts yet
-        const loansWithoutContracts = data.loans.filter((loan: Loan) => {
-          // TODO: Add a field to check if loan has contract
-          return true // For now, show all loans
-        })
-        setSearchResults(loansWithoutContracts)
+        // Show all clients, regardless of whether they have loans
+        setSearchResults(data.clients)
       } else {
-        console.error('Error searching loans:', data.error)
+        console.error('Error searching clients:', data.error)
         setSearchResults([])
       }
     } catch (error) {
-      console.error('Error searching loans:', error)
+      console.error('Error searching clients:', error)
       setSearchResults([])
     } finally {
       setSearchLoading(false)
@@ -151,21 +164,34 @@ PRESTAMISTA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      searchLoans(searchTerm)
+      searchClients(searchTerm)
     }, 500) // Debounce search
 
     return () => clearTimeout(timeoutId)
   }, [searchTerm])
 
-  const handleLoanSelect = (loanId: string) => {
-    const loan = searchResults.find(l => l.id === loanId)
-    if (!loan) return
+  const handleClientSelect = (client: Client) => {
+    setSelectedClient(client)
+    setSelectedLoan(null)
+    
+    // Clear loan-specific form data
+    form.setValue('loanId', '')
+    form.setValue('guaranteeId', '')
+    form.setValue('amount', 0)
+    form.setValue('interest', 0)
+    form.setValue('installments', 6)
+    
+    // Set client data
+    form.setValue('clientId', client.id)
+  }
+
+  const handleLoanSelect = (loan: Loan) => {
+    if (!selectedClient) return
 
     setSelectedLoan(loan)
     
     // Auto-fill form with loan data - ensure amounts are numbers
-    form.setValue('loanId', loanId)
-    form.setValue('clientId', loan.client.id)
+    form.setValue('loanId', loan.id)
     form.setValue('guaranteeId', loan.guarantee.id)
     form.setValue('amount', Number(loan.amount))
     form.setValue('interest', Number(loan.totalAmount) - Number(loan.amount))
@@ -195,15 +221,15 @@ PRESTAMISTA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb
 
   return (
     <div className="space-y-6">
-      {/* Search for Loan */}
+      {/* Search for Client */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
-            Buscar Préstamo para Contrato
+            Buscar Cliente para Contrato
           </CardTitle>
           <CardDescription>
-            Busca el préstamo por nombre del cliente para generar el contrato
+            Busca el cliente por nombre, email, teléfono o documento para generar el contrato
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -223,28 +249,93 @@ PRESTAMISTA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb
 
             {searchResults.length > 0 && (
               <div className="space-y-2">
-                <h4 className="font-medium">Préstamos encontrados:</h4>
+                <h4 className="font-medium">Clientes encontrados:</h4>
                 <div className="max-h-60 overflow-y-auto space-y-2">
-                  {searchResults.map((loan) => (
+                  {searchResults.map((client) => (
                     <Card 
-                      key={loan.id} 
+                      key={client.id} 
                       className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                        selectedLoan?.id === loan.id ? 'ring-2 ring-primary' : ''
+                        selectedClient?.id === client.id ? 'ring-2 ring-primary' : ''
                       }`}
-                      onClick={() => handleLoanSelect(loan.id)}
+                      onClick={() => handleClientSelect(client)}
                     >
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start">
                           <div>
                             <div className="font-medium">
-                              {`${loan.client.firstName} ${loan.client.lastName}`}
+                              {`${client.firstName} ${client.lastName}`}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {loan.client.email || loan.client.phone || 'Sin contacto'}
+                              {client.email || client.phone || 'Sin contacto'}
                             </div>
-                            <div className="text-xs text-muted-foreground mt-1">
+                            {client.documentNumber && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {client.documentType || 'Doc'}: {client.documentNumber}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            {client.loans && client.loans.length > 0 ? (
+                              <Badge variant="default">
+                                {client.loans.length} préstamo{client.loans.length !== 1 ? 's' : ''}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">
+                                Sin préstamos
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {searchTerm && searchResults.length === 0 && !searchLoading && (
+              <div className="text-center py-4 text-muted-foreground">
+                No se encontraron clientes que coincidan con la búsqueda
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Select Loan from Client */}
+      {selectedClient && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Seleccionar Préstamo
+            </CardTitle>
+            <CardDescription>
+              Selecciona el préstamo de {selectedClient.firstName} {selectedClient.lastName} para el contrato
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedClient.loans && selectedClient.loans.length > 0 ? (
+              <div className="space-y-2">
+                <h4 className="font-medium">Préstamos disponibles:</h4>
+                <div className="space-y-2">
+                  {selectedClient.loans.map((loan) => (
+                    <Card 
+                      key={loan.id} 
+                      className={`cursor-pointer transition-colors hover:bg-muted/50 ${
+                        selectedLoan?.id === loan.id ? 'ring-2 ring-primary' : ''
+                      }`}
+                      onClick={() => handleLoanSelect(loan)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="text-sm text-muted-foreground">
                               Préstamo: {formatCurrency(loan.amount)} | 
                               Total: {formatCurrency(loan.totalAmount)}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Garantía: {loan.guarantee.name}
                             </div>
                           </div>
                           <div className="text-right">
@@ -261,19 +352,24 @@ PRESTAMISTA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb
                   ))}
                 </div>
               </div>
-            )}
-
-            {searchTerm && searchResults.length === 0 && !searchLoading && (
-              <div className="text-center py-4 text-muted-foreground">
-                No se encontraron préstamos
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <h4 className="font-medium mb-2">Sin préstamos activos</h4>
+                <p className="text-sm">
+                  Este cliente no tiene préstamos activos para generar un contrato.
+                </p>
+                <p className="text-sm mt-1">
+                  Primero debe crear un préstamo para este cliente.
+                </p>
               </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Contract Form */}
-      {selectedLoan && (
+      {selectedClient && selectedLoan && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -291,9 +387,9 @@ PRESTAMISTA&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
                   <div>
                     <div className="font-medium">Cliente</div>
-                    <div>{`${selectedLoan.client.firstName} ${selectedLoan.client.lastName}`}</div>
+                    <div>{`${selectedClient.firstName} ${selectedClient.lastName}`}</div>
                     <div className="text-sm text-muted-foreground">
-                      {selectedLoan.client.email || selectedLoan.client.phone || 'Sin contacto'}
+                      {selectedClient.email || selectedClient.phone || 'Sin contacto'}
                     </div>
                   </div>
                   <div>

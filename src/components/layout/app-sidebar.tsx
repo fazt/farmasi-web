@@ -11,10 +11,11 @@ import {
   Settings,
   Home,
   LogOut,
-  ChevronRight,
   Percent,
   User,
-  MessageSquare
+  MessageSquare,
+  Briefcase,
+  FolderOpen
 } from 'lucide-react'
 import { useState } from 'react'
 import { signOut } from 'next-auth/react'
@@ -47,6 +48,9 @@ const mainItems = [
     url: '/dashboard/clients',
     icon: Users,
   },
+]
+
+const prestamosItems = [
   {
     title: 'Préstamos',
     url: '/dashboard/loans',
@@ -64,21 +68,24 @@ const mainItems = [
   },
 ]
 
+const contratosItems = [
+  {
+    title: 'Lista de Contratos',
+    url: '/dashboard/contracts',
+    icon: FileText,
+  },
+  {
+    title: 'Plantillas de Contratos',
+    url: '/dashboard/templates?tab=contract',
+    icon: FileText,
+  },
+]
+
 const configurationItems = [
   {
     title: 'Tasa de Interés',
     url: '/dashboard/interest-rates',
     icon: Percent,
-  },
-  {
-    title: 'Contratos',
-    url: '/dashboard/contracts',
-    icon: FileText,
-  },
-  {
-    title: 'Plantillas WhatsApp',
-    url: '/dashboard/whatsapp-templates',
-    icon: MessageSquare,
   },
   {
     title: 'Usuarios',
@@ -93,7 +100,6 @@ const configurationItems = [
 ]
 
 export function AppSidebar() {
-  const [configOpen, setConfigOpen] = useState(false)
   const pathname = usePathname()
   
   const handleSignOut = () => {
@@ -114,14 +120,15 @@ export function AppSidebar() {
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-sm">F</span>
           </div>
-          <span className="font-semibold text-lg">Farmasi</span>
+          <span className="font-semibold text-lg">Grupo Ascona</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
+        {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupLabel>Navegación</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-2">
+            <SidebarMenu className="space-y-1">
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild size="lg" isActive={isActive(item.url)}>
@@ -132,34 +139,63 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => setConfigOpen(!configOpen)}
-                  size="lg"
-                  className="py-3"
-                >
-                  <Settings className="h-5 w-5" />
-                  <span className="font-medium">Configuraciones</span>
-                  <ChevronRight 
-                    className={`ml-auto h-4 w-4 transition-transform ${configOpen ? 'rotate-90' : ''}`}
-                  />
-                </SidebarMenuButton>
-                {configOpen && (
-                  <SidebarMenuSub className="mt-2 space-y-1">
-                    {configurationItems.map((item) => (
-                      <SidebarMenuSubItem key={item.title}>
-                        <SidebarMenuSubButton asChild isActive={isActive(item.url)}>
-                          <Link href={item.url} className="py-2">
-                            <item.icon className="h-4 w-4" />
-                            <span className="font-medium">{item.title}</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
-                  </SidebarMenuSub>
-                )}
-              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* PRESTAMOS Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Préstamos</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {prestamosItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild size="lg" isActive={isActive(item.url)}>
+                    <Link href={item.url} className="py-3">
+                      <item.icon className="h-5 w-5" />
+                      <span className="font-medium">{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* CONTRATOS Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Contratos</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {contratosItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild size="lg" isActive={isActive(item.url)}>
+                    <Link href={item.url} className="py-3">
+                      <item.icon className="h-5 w-5" />
+                      <span className="font-medium">{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        
+        {/* CONFIGURACION Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Configuración</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-1">
+              {configurationItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild size="lg" isActive={isActive(item.url)}>
+                    <Link href={item.url} className="py-3">
+                      <item.icon className="h-5 w-5" />
+                      <span className="font-medium">{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -174,7 +210,7 @@ export function AppSidebar() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs font-medium text-black dark:text-white">Admin</span>
-                  <span className="text-[10px] text-black/70 dark:text-white/80">admin@farmasi.com</span>
+                  <span className="text-[10px] text-black/70 dark:text-white/80">admin@grupoascona.com</span>
                 </div>
               </div>
               <Button

@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { guaranteeSchema } from '@/lib/validations/guarantee'
+import { writeFile } from 'fs/promises'
+import { join } from 'path'
+import { existsSync, mkdirSync } from 'fs'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
+    const availableOnly = searchParams.get('available') === 'true'
 
     const skip = (page - 1) * limit
 
     const where: any = {}
+
+    // Filter only available guarantees if requested
+    if (availableOnly) {
+      where.status = 'ACTIVE'
+    }
 
     if (search) {
       where.OR = [
@@ -34,6 +36,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
+          photos: true,
           _count: {
             select: {
               loans: true,
@@ -65,26 +68,100 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const contentType = request.headers.get('content-type')
+    let name: string
+    let value: number
+    let description: string | null = null
+    let photos: File[] = []
+
+    if (contentType?.includes('application/json')) {
+      // Handle JSON data (from QuickGuaranteeModal)
+      const data = await request.json()
+      name = data.name
+      value = parseFloat(data.value)
+      description = data.description || null
+    } else {
+      // Handle FormData for file uploads
+      const formData = await request.formData()
+      
+      // Extract basic data
+      name = formData.get('name') as string
+      value = parseFloat(formData.get('value') as string)
+      description = formData.get('description') as string || null
+      
+      // Extract photos
+      let index = 0
+      while (formData.has(`photos[${index}]`)) {
+        const photo = formData.get(`photos[${index}]`) as File
+        if (photo && photo.size > 0) {
+          photos.push(photo)
+        }
+        index++
+      }
     }
 
-    const body = await request.json()
+    // Validate basic data
+    if (!name || name.length < 2) {
+      return NextResponse.json({ error: 'El nombre debe tener al menos 2 caracteres' }, { status: 400 })
+    }
     
-    // Validar los datos con Zod
-    const validatedData = guaranteeSchema.parse(body)
+    if (!value || value <= 0) {
+      return NextResponse.json({ error: 'El valor debe ser mayor a 0' }, { status: 400 })
+    }
 
-    // Separar los datos que van directamente a la base de datos
-    const { photos, ...guaranteeData } = validatedData
-
-    // Crear la garantía en la base de datos (sin el campo photos)
+    // Create guarantee in database first
     const guarantee = await prisma.guarantee.create({
-      data: guaranteeData,
+      data: {
+        name,
+        value,
+        description,
+      },
+    })
+
+    // Handle photo uploads if any
+    if (photos.length > 0) {
+      // Create directory if it doesn't exist
+      const uploadDir = join(process.cwd(), 'public', 'uploads', 'guarantees', guarantee.id)
+      if (!existsSync(uploadDir)) {
+        mkdirSync(uploadDir, { recursive: true })
+      }
+
+      // Save each photo and create GuaranteePhoto records
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i]
+        const bytes = await photo.arrayBuffer()
+        const buffer = Buffer.from(bytes)
+        
+        // Generate unique filename
+        const fileExtension = photo.name.split('.').pop() || 'jpg'
+        const timestamp = Date.now()
+        const filename = `photo_${timestamp}_${i + 1}.${fileExtension}`
+        const filepath = join(uploadDir, filename)
+        
+        await writeFile(filepath, buffer)
+        
+        // Create GuaranteePhoto record
+        await prisma.guaranteePhoto.create({
+          data: {
+            guaranteeId: guarantee.id,
+            url: `/uploads/guarantees/${guarantee.id}/${filename}`,
+            filename: filename,
+            size: buffer.length,
+            mimeType: photo.type,
+          },
+        })
+      }
+    }
+    
+    // Return updated guarantee with photos
+    const updatedGuarantee = await prisma.guarantee.findUnique({
+      where: { id: guarantee.id },
+      include: {
+        photos: true,
+      },
     })
     
-    return NextResponse.json(guarantee)
+    return NextResponse.json(updatedGuarantee)
     
   } catch (error: any) {
     console.error('Error creating guarantee:', error)

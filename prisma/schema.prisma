@@ -108,11 +108,13 @@ model InterestRate {
 }
 
 model Guarantee {
-  id          String    @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
-  value       Decimal   @db.Decimal(10, 2)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  value       Decimal         @db.Decimal(10, 2)
+  description String?
+  status      GuaranteeStatus @default(ACTIVE)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
   
   photos      GuaranteePhoto[]
   loans       Loan[]
@@ -183,6 +185,7 @@ model Contract {
   clientId    String
   loanId      String
   guaranteeId String
+  templateId  String?
   startDate   DateTime       @default(now())
   endDate     DateTime
   amount      Decimal        @db.Decimal(10, 2)
@@ -197,21 +200,28 @@ model Contract {
   client      Client         @relation(fields: [clientId], references: [id])
   loan        Loan           @relation(fields: [loanId], references: [id])
   guarantee   Guarantee      @relation(fields: [guaranteeId], references: [id])
+  template    Template?      @relation(fields: [templateId], references: [id])
   
   @@map("contracts")
 }
 
-model WhatsAppTemplate {
-  id        String   @id @default(cuid())
-  name      String
-  content   String   @db.Text
-  category  String
-  variables String[]
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Template {
+  id          String       @id @default(cuid())
+  type        TemplateType
+  title       String
+  name        String?
+  content     String       @db.Text
+  richContent String?      @db.Text
+  category    String?
+  variables   String[]
+  metadata    Json?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   
-  @@map("whatsapp_templates")
+  contracts   Contract[]
+  
+  @@map("templates")
 }
 
 enum Role {
@@ -234,8 +244,8 @@ enum MaritalStatus {
 
 enum GuaranteeStatus {
   ACTIVE
-  INACTIVE
   USED
+  INACTIVE
 }
 
 enum LoanStatus {
@@ -249,4 +259,9 @@ enum ContractStatus {
   ACTIVE
   COMPLETED
   CANCELLED
+}
+
+enum TemplateType {
+  WHATSAPP
+  CONTRACT
 }

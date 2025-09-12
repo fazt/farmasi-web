@@ -31,7 +31,7 @@ interface ClientFormProps {
   onSubmit: (data: ClientFormData) => Promise<void>
   isLoading?: boolean
   formId?: string
-  section?: 'personal' | 'documents' | 'all'
+  section?: 'required' | 'extra' | 'all'
 }
 
 export function ClientForm({ initialData, onSubmit, isLoading, formId, section = 'all' }: ClientFormProps) {
@@ -62,7 +62,7 @@ export function ClientForm({ initialData, onSubmit, isLoading, formId, section =
     }
   }
 
-  const renderPersonalInfo = () => (
+  const renderRequiredInfo = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <FormField
         control={form.control}
@@ -100,23 +100,23 @@ export function ClientForm({ initialData, onSubmit, isLoading, formId, section =
 
       <FormField
         control={form.control}
-        name="gender"
+        name="documentType"
         render={({ field }) => (
           <FormItem>
             <FormLabel className="flex items-center space-x-2">
-              <Users className="h-4 w-4" />
-              <span>Género</span>
+              <FileText className="h-4 w-4" />
+              <span>Tipo de Documento *</span>
             </FormLabel>
             <Select onValueChange={field.onChange} defaultValue={field.value}>
               <FormControl>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleccione el género" />
+                  <SelectValue placeholder="Seleccione el tipo" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="MALE">Masculino</SelectItem>
-                <SelectItem value="FEMALE">Femenino</SelectItem>
-                <SelectItem value="OTHER">Otro</SelectItem>
+                <SelectItem value="DNI">DNI</SelectItem>
+                <SelectItem value="CE">Carné de Extranjería</SelectItem>
+                <SelectItem value="PASAPORTE">Pasaporte</SelectItem>
               </SelectContent>
             </Select>
             <FormMessage />
@@ -126,42 +126,135 @@ export function ClientForm({ initialData, onSubmit, isLoading, formId, section =
 
       <FormField
         control={form.control}
-        name="maritalStatus"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="flex items-center space-x-2">
-              <Users className="h-4 w-4" />
-              <span>Estado Civil</span>
-            </FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
+        name="documentNumber"
+        render={({ field }) => {
+          const documentType = form.watch('documentType')
+          const documentValue = field.value || ''
+          
+          const getValidation = () => {
+            if (!documentType || !documentValue) return { showError: false, message: '', placeholder: 'Ingrese el número' }
+            
+            switch (documentType) {
+              case 'DNI':
+                const dniValid = documentValue.length === 8
+                return {
+                  showError: documentValue.length > 0 && documentValue.length < 8,
+                  message: `Faltan ${8 - documentValue.length} dígitos (${documentValue.length}/8)`,
+                  placeholder: '12345678',
+                  maxLength: 8,
+                  isNumeric: true
+                }
+              case 'CE':
+                const ceValid = documentValue.length === 9
+                return {
+                  showError: documentValue.length > 0 && documentValue.length < 9,
+                  message: `Faltan ${9 - documentValue.length} dígitos (${documentValue.length}/9)`,
+                  placeholder: '123456789',
+                  maxLength: 9,
+                  isNumeric: true
+                }
+              case 'PASAPORTE':
+                const passportValid = documentValue.length >= 6 && documentValue.length <= 12
+                return {
+                  showError: documentValue.length > 0 && documentValue.length < 6,
+                  message: documentValue.length < 6 ? `Mínimo 6 caracteres (${documentValue.length}/6)` : '',
+                  placeholder: 'ABC123456',
+                  maxLength: 12,
+                  isNumeric: false
+                }
+              default:
+                return { showError: false, message: '', placeholder: 'Ingrese el número' }
+            }
+          }
+          
+          const validation = getValidation()
+          
+          return (
+            <FormItem>
+                <FormLabel className="flex items-center space-x-2">
+                  <FileText className="h-4 w-4" />
+                  <span>Número de Documento *</span>
+                </FormLabel>
               <FormControl>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Seleccione el estado civil" />
-                </SelectTrigger>
+                <Input 
+                  placeholder={validation.placeholder}
+                  className={validation.showError ? 'border-red-500 focus:border-red-500' : ''}
+                  onInput={(e) => {
+                    let value = e.currentTarget.value
+                    if (validation.isNumeric) {
+                      value = value.replace(/[^0-9]/g, '')
+                    }
+                    field.onChange(value)
+                  }}
+                  value={documentValue}
+                />
               </FormControl>
-              <SelectContent>
-                <SelectItem value="SINGLE">Soltero/a</SelectItem>
-                <SelectItem value="MARRIED">Casado/a</SelectItem>
-                <SelectItem value="DIVORCED">Divorciado/a</SelectItem>
-                <SelectItem value="WIDOWED">Viudo/a</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
+              {validation.showError && validation.message && (
+                <div className="flex items-center space-x-1 mt-1">
+                  <div className="w-1 h-4 bg-red-500 rounded-full"></div>
+                  <span className="text-sm text-red-600">
+                    {validation.message}
+                  </span>
+                </div>
+              )}
+              <FormMessage />
+            </FormItem>
+          )
+        }}
       />
 
       <FormField
         control={form.control}
-        name="occupation"
+        name="phone"
+        render={({ field }) => {
+          const phoneValue = field.value || ''
+          const showError = phoneValue.length > 0 && phoneValue.length < 9
+          
+          return (
+            <FormItem>
+              <FormLabel className="flex items-center space-x-2">
+                <Phone className="h-4 w-4" />
+                <span>Teléfono</span>
+              </FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="987654321"
+                  className={showError ? 'border-red-500 focus:border-red-500' : ''}
+                  onInput={(e) => {
+                    const value = e.currentTarget.value.replace(/[^0-9]/g, '')
+                    field.onChange(value)
+                  }}
+                  value={phoneValue}
+                />
+              </FormControl>
+              {showError && (
+                <div className="flex items-center space-x-1 mt-1">
+                  <div className="w-1 h-4 bg-red-500 rounded-full"></div>
+                  <span className="text-sm text-red-600">
+                    Faltan {9 - phoneValue.length} dígitos ({phoneValue.length}/9)
+                  </span>
+                </div>
+              )}
+              <FormMessage />
+            </FormItem>
+          )
+        }}
+      />
+
+      <FormField
+        control={form.control}
+        name="email"
         render={({ field }) => (
           <FormItem>
             <FormLabel className="flex items-center space-x-2">
-              <Briefcase className="h-4 w-4" />
-              <span>Ocupación</span>
+              <Mail className="h-4 w-4" />
+              <span>Email</span>
             </FormLabel>
             <FormControl>
-              <Input placeholder="Ingrese la ocupación" {...field} />
+              <Input
+                placeholder="correo@ejemplo.com"
+                {...field}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -170,86 +263,28 @@ export function ClientForm({ initialData, onSubmit, isLoading, formId, section =
     </div>
   )
 
-  const renderDocumentsInfo = () => (
+  const renderExtraInfo = () => (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           control={form.control}
-          name="phone"
-          render={({ field }) => {
-            const phoneValue = field.value || ''
-            const showError = phoneValue.length > 0 && phoneValue.length < 9
-            
-            return (
-              <FormItem>
-                <FormLabel className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4" />
-                  <span>Teléfono</span>
-                </FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="987654321"
-                    className={showError ? 'border-red-500 focus:border-red-500' : ''}
-                    onInput={(e) => {
-                      const value = e.currentTarget.value.replace(/[^0-9]/g, '')
-                      field.onChange(value)
-                    }}
-                    value={phoneValue}
-                  />
-                </FormControl>
-                {showError && (
-                  <div className="flex items-center space-x-1 mt-1">
-                    <div className="w-1 h-4 bg-red-500 rounded-full"></div>
-                    <span className="text-sm text-red-600">
-                      Faltan {9 - phoneValue.length} dígitos ({phoneValue.length}/9)
-                    </span>
-                  </div>
-                )}
-                <FormMessage />
-              </FormItem>
-            )
-          }}
-        />
-
-        <FormField
-          control={form.control}
-          name="email"
+          name="gender"
           render={({ field }) => (
             <FormItem>
               <FormLabel className="flex items-center space-x-2">
-                <Mail className="h-4 w-4" />
-                <span>Email</span>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="correo@ejemplo.com"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="documentType"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center space-x-2">
-                <FileText className="h-4 w-4" />
-                <span>Tipo de Documento *</span>
+                <Users className="h-4 w-4" />
+                <span>Género</span>
               </FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleccione el tipo" />
+                    <SelectValue placeholder="Seleccione el género" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="DNI">DNI</SelectItem>
-                  <SelectItem value="CE">Carné de Extranjería</SelectItem>
-                  <SelectItem value="PASAPORTE">Pasaporte</SelectItem>
+                  <SelectItem value="MALE">Masculino</SelectItem>
+                  <SelectItem value="FEMALE">Femenino</SelectItem>
+                  <SelectItem value="OTHER">Otro</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -259,81 +294,46 @@ export function ClientForm({ initialData, onSubmit, isLoading, formId, section =
 
         <FormField
           control={form.control}
-          name="documentNumber"
-          render={({ field }) => {
-            const documentType = form.watch('documentType')
-            const documentValue = field.value || ''
-            
-            const getValidation = () => {
-              if (!documentType || !documentValue) return { showError: false, message: '', placeholder: 'Ingrese el número' }
-              
-              switch (documentType) {
-                case 'DNI':
-                  const dniValid = documentValue.length === 8
-                  return {
-                    showError: documentValue.length > 0 && documentValue.length < 8,
-                    message: `Faltan ${8 - documentValue.length} dígitos (${documentValue.length}/8)`,
-                    placeholder: '12345678',
-                    maxLength: 8,
-                    isNumeric: true
-                  }
-                case 'CE':
-                  const ceValid = documentValue.length === 9
-                  return {
-                    showError: documentValue.length > 0 && documentValue.length < 9,
-                    message: `Faltan ${9 - documentValue.length} dígitos (${documentValue.length}/9)`,
-                    placeholder: '123456789',
-                    maxLength: 9,
-                    isNumeric: true
-                  }
-                case 'PASAPORTE':
-                  const passportValid = documentValue.length >= 6 && documentValue.length <= 12
-                  return {
-                    showError: documentValue.length > 0 && documentValue.length < 6,
-                    message: documentValue.length < 6 ? `Mínimo 6 caracteres (${documentValue.length}/6)` : '',
-                    placeholder: 'ABC123456',
-                    maxLength: 12,
-                    isNumeric: false
-                  }
-                default:
-                  return { showError: false, message: '', placeholder: 'Ingrese el número' }
-              }
-            }
-            
-            const validation = getValidation()
-            
-            return (
-              <FormItem>
-                  <FormLabel className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4" />
-                    <span>Número de Documento *</span>
-                  </FormLabel>
+          name="maritalStatus"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center space-x-2">
+                <Users className="h-4 w-4" />
+                <span>Estado Civil</span>
+              </FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <Input 
-                    placeholder={validation.placeholder}
-                    className={validation.showError ? 'border-red-500 focus:border-red-500' : ''}
-                    onInput={(e) => {
-                      let value = e.currentTarget.value
-                      if (validation.isNumeric) {
-                        value = value.replace(/[^0-9]/g, '')
-                      }
-                      field.onChange(value)
-                    }}
-                    value={documentValue}
-                  />
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Seleccione el estado civil" />
+                  </SelectTrigger>
                 </FormControl>
-                {validation.showError && validation.message && (
-                  <div className="flex items-center space-x-1 mt-1">
-                    <div className="w-1 h-4 bg-red-500 rounded-full"></div>
-                    <span className="text-sm text-red-600">
-                      {validation.message}
-                    </span>
-                  </div>
-                )}
-                <FormMessage />
-              </FormItem>
-            )
-          }}
+                <SelectContent>
+                  <SelectItem value="SINGLE">Soltero/a</SelectItem>
+                  <SelectItem value="MARRIED">Casado/a</SelectItem>
+                  <SelectItem value="DIVORCED">Divorciado/a</SelectItem>
+                  <SelectItem value="WIDOWED">Viudo/a</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="occupation"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center space-x-2">
+                <Briefcase className="h-4 w-4" />
+                <span>Ocupación</span>
+              </FormLabel>
+              <FormControl>
+                <Input placeholder="Ingrese la ocupación" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
 
         <FormField
@@ -400,8 +400,8 @@ export function ClientForm({ initialData, onSubmit, isLoading, formId, section =
         onSubmit={form.handleSubmit(handleSubmit)} 
         className="space-y-6"
       >
-        {(section === 'all' || section === 'personal') && renderPersonalInfo()}
-        {(section === 'all' || section === 'documents') && renderDocumentsInfo()}
+        {(section === 'all' || section === 'required') && renderRequiredInfo()}
+        {(section === 'all' || section === 'extra') && renderExtraInfo()}
       </form>
     </Form>
   )

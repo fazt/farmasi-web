@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { contractSchema } from '@/lib/validations/contract'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -51,6 +44,7 @@ export async function GET(request: NextRequest) {
             },
           },
           guarantee: true,
+          template: true,
         },
       }),
       prisma.contract.count({ where }),
@@ -76,13 +70,41 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Remove auth check for now
+    // const session = await getServerSession(authOptions)
+    // 
+    // if (!session) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // }
 
-    const body = await request.json()
+    // Handle both JSON and FormData
+    let body: any
+    const contentType = request.headers.get('content-type')
+    
+    if (contentType?.includes('multipart/form-data')) {
+      // Handle FormData
+      const formData = await request.formData()
+      const contractDataString = formData.get('contractData') as string
+      
+      if (!contractDataString) {
+        return NextResponse.json({ error: 'Missing contract data' }, { status: 400 })
+      }
+      
+      body = JSON.parse(contractDataString)
+      
+      // Handle file uploads if present
+      const idPhotoFront = formData.get('idPhotoFront') as File
+      const idPhotoBack = formData.get('idPhotoBack') as File
+      
+      // TODO: Handle file storage here if needed
+      console.log('ID Photos received:', {
+        front: idPhotoFront?.name,
+        back: idPhotoBack?.name
+      })
+    } else {
+      // Handle JSON
+      body = await request.json()
+    }
     
     // If creating from loan, get loan data
     if (body.loanId && !body.clientId) {
@@ -151,6 +173,7 @@ export async function POST(request: NextRequest) {
           },
         },
         guarantee: true,
+        template: true,
       },
     })
 

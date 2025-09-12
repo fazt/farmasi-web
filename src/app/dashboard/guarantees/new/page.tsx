@@ -18,10 +18,26 @@ export default function NewGuaranteePage() {
     try {
       console.log('Enviando datos de garantía:', data)
       
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('name', data.name)
+      formData.append('value', data.value.toString())
+      
+      // Add description if provided
+      if (data.description) {
+        formData.append('description', data.description)
+      }
+      
+      // Add photos to FormData
+      if (data.photos && data.photos.length > 0) {
+        data.photos.forEach((photo, index) => {
+          formData.append(`photos[${index}]`, photo)
+        })
+      }
+      
       const response = await fetch('/api/guarantees', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: formData,
       })
 
       if (response.ok) {

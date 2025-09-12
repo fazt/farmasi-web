@@ -28,6 +28,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton'
 import { ClientSearchModal } from '@/components/loans/client-search-modal'
 import { QuickGuaranteeModal } from '@/components/guarantees/quick-guarantee-modal'
+import { QuickClientModal } from '@/components/clients/quick-client-modal'
 
 // Form validation schema
 const loanFormSchema = z.object({
@@ -94,7 +95,7 @@ export function LoanForm({ onSubmit, isLoading, renderSkeleton, onDataLoaded }: 
       try {
         const [ratesRes, guaranteesRes, clientsRes] = await Promise.all([
           fetch('/api/interest-rates?active=true&limit=100'),
-          fetch('/api/guarantees?limit=100'),
+          fetch('/api/guarantees?available=true&limit=100'),
           fetch('/api/clients?limit=100'),
         ])
 
@@ -132,9 +133,24 @@ export function LoanForm({ onSubmit, isLoading, renderSkeleton, onDataLoaded }: 
     form.setValue('clientId', client.id)
   }
 
-  const handleGuaranteeCreated = (newGuarantee: Guarantee) => {
-    setGuarantees(prev => [newGuarantee, ...prev])
+  const handleGuaranteeCreated = async (newGuarantee: Guarantee) => {
+    // Refresh guarantees list to get latest available guarantees
+    try {
+      const guaranteesRes = await fetch('/api/guarantees?available=true&limit=100')
+      const guaranteesData = await guaranteesRes.json()
+      setGuarantees(guaranteesData.guarantees || [])
+    } catch (error) {
+      console.error('Error refreshing guarantees:', error)
+      // Fallback: add to existing list
+      setGuarantees(prev => [newGuarantee, ...prev])
+    }
     form.setValue('guaranteeId', newGuarantee.id)
+  }
+
+  const handleClientCreated = (newClient: Client) => {
+    setClients(prev => [newClient, ...prev])
+    setSelectedClient(newClient)
+    form.setValue('clientId', newClient.id)
   }
 
   const handleGuarantorSelect = (guarantor: Client) => {
@@ -231,13 +247,18 @@ export function LoanForm({ onSubmit, isLoading, renderSkeleton, onDataLoaded }: 
                 <Users className="h-4 w-4" />
                 <span>Cliente *</span>
               </FormLabel>
-              <ClientSearchModal 
-                selectedClient={selectedClient}
-                onClientSelect={handleClientSelect}
-                disabled={isLoading}
-              />
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <ClientSearchModal 
+                    selectedClient={selectedClient}
+                    onClientSelect={handleClientSelect}
+                    disabled={isLoading}
+                  />
+                </div>
+                <QuickClientModal onClientCreated={handleClientCreated} />
+              </div>
               <FormDescription>
-                Seleccione el cliente que recibirá el préstamo
+                Seleccione un cliente existente o registre uno nuevo
               </FormDescription>
             </div>
 

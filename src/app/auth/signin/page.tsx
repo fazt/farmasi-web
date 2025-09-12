@@ -54,7 +54,7 @@ export default function SignInPage() {
               <Building2 className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Farmasi
+              Grupo Ascona
             </h1>
             <p className="text-gray-600 dark:text-gray-300 mt-2">
               Sistema de Préstamos Personales
@@ -163,7 +163,7 @@ export default function SignInPage() {
 
           {/* Footer */}
           <div className="text-center mt-8 text-sm text-gray-500 dark:text-gray-400">
-            <p>© 2024 Farmasi. Sistema de préstamos personales.</p>
+            <p>© 2024 Grupo Ascona. Sistema de préstamos personales.</p>
             <p className="mt-1">Acceso autorizado únicamente.</p>
           </div>
         </div>

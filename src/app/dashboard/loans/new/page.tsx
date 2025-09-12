@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { LoanForm } from '@/components/loans/loan-form'
+import { useToast } from '@/hooks/use-toast'
 
 export default function NewLoanPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const { toast } = useToast()
 
   const handleCreateLoan = async (data: any) => {
     setIsSubmitting(true)
@@ -23,15 +25,37 @@ export default function NewLoanPage() {
       })
 
       if (response.ok) {
+        toast({
+          title: "Préstamo creado",
+          description: "El préstamo se ha creado exitosamente",
+        })
         router.push('/dashboard/loans')
       } else {
         const error = await response.json()
         console.error('Error creating loan:', error)
-        alert(error.error || 'Error al crear el préstamo')
+        
+        // Check if the error is about active loan
+        if (error.error?.includes('activo') || error.error?.includes('active')) {
+          toast({
+            title: "Cliente con préstamo activo",
+            description: error.error || "Este cliente ya tiene un préstamo activo. Debe completar el préstamo actual antes de solicitar uno nuevo.",
+            variant: "destructive",
+          })
+        } else {
+          toast({
+            title: "Error al crear préstamo",
+            description: error.error || 'Ha ocurrido un error al crear el préstamo',
+            variant: "destructive",
+          })
+        }
       }
     } catch (error) {
       console.error('Error creating loan:', error)
-      alert('Error al crear el préstamo')
+      toast({
+        title: "Error de conexión",
+        description: "No se pudo conectar con el servidor. Por favor, intente nuevamente.",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }

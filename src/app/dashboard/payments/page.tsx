@@ -1,9 +1,6 @@
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { PaymentsClient } from '@/components/payments/payments-client'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { redirect } from 'next/navigation'
 
 interface Payment {
   id: string
@@ -44,7 +41,7 @@ interface PaymentStats {
   total: {
     amount: number
     count: number
-    average: number
+    profit: number
   }
   today: {
     amount: number
@@ -57,11 +54,6 @@ interface PaymentStats {
 }
 
 async function getInitialData() {
-  const session = await getServerSession(authOptions)
-  
-  if (!session) {
-    redirect('/auth/signin')
-  }
 
   const limit = 10
   const page = 1
@@ -80,7 +72,7 @@ async function getInitialData() {
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekStart.getDate() + 7)
 
-    const [paymentsData, total, totalPayments, todayPayments, weekPayments] = await Promise.all([
+    const [paymentsData, total, totalPayments, todayPayments, weekPayments, completedLoans] = await Promise.all([
       prisma.payment.findMany({
         skip,
         take: limit,
@@ -98,7 +90,6 @@ async function getInitialData() {
       prisma.payment.aggregate({
         _sum: { amount: true },
         _count: { id: true },
-        _avg: { amount: true },
       }),
       prisma.payment.aggregate({
         _sum: { amount: true },
@@ -118,6 +109,14 @@ async function getInitialData() {
             gte: weekStart,
             lt: weekEnd,
           },
+        },
+      }),
+      // Get completed loans to calculate profit
+      prisma.loan.findMany({
+        where: { status: 'PAID' },
+        select: {
+          amount: true,
+          totalAmount: true,
         },
       }),
     ])
@@ -148,11 +147,19 @@ async function getInitialData() {
       pages: Math.ceil(total / limit),
     }
 
+    // Calculate total profit from completed loans
+    const totalProfit = completedLoans.reduce((sum, loan) => {
+      const loanAmount = Number(loan.amount)
+      const totalAmount = Number(loan.totalAmount)
+      const profit = totalAmount - loanAmount
+      return sum + profit
+    }, 0)
+
     const stats = {
       total: {
         amount: Number(totalPayments._sum.amount || 0),
         count: totalPayments._count.id,
-        average: Number(totalPayments._avg.amount || 0),
+        profit: totalProfit,
       },
       today: {
         amount: Number(todayPayments._sum.amount || 0),
@@ -171,7 +178,7 @@ async function getInitialData() {
       payments: [],
       pagination: { page: 1, limit: 10, total: 0, pages: 0 },
       stats: {
-        total: { amount: 0, count: 0, average: 0 },
+        total: { amount: 0, count: 0, profit: 0 },
         today: { amount: 0, count: 0 },
         week: { amount: 0, count: 0 },
       }

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AuthProvider } from "@/components/providers/session-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Farmasi - Sistema de Préstamos Personales",
+  title: "Grupo Ascona - Sistema de Préstamos Personales",
   description: "Sistema de administración de préstamos personales",
 };
 
@@ -36,6 +37,7 @@ export default async function RootLayout({
         <ThemeProvider>
           <AuthProvider session={session}>
             {children}
+            <Toaster />
           </AuthProvider>
         </ThemeProvider>
       </body>

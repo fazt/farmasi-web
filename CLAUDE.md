@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Farmasi is a complete personal loan management application for a lending company. It manages clients, loans, payments, interest rates, guarantees, and contracts. The system helps track loan disbursements, payment schedules, and guarantees for 6-week loan cycles.
+Grupo Ascona is a complete personal loan management application for a lending company. It manages clients, loans, payments, interest rates, guarantees, and contracts. The system helps track loan disbursements, payment schedules, and guarantees for 6-week loan cycles.
 
 **Current Status:** ✅ FULLY IMPLEMENTED - All core features are complete and functional.
 

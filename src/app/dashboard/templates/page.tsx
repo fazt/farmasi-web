@@ -2,21 +2,24 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, MessageSquare } from 'lucide-react'
+import { Plus, Search, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { WhatsAppTemplatesTable } from '@/components/whatsapp-templates/whatsapp-templates-table'
-import { WhatsAppTemplateForm } from '@/components/whatsapp-templates/whatsapp-template-form'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-interface WhatsAppTemplate {
+type TemplateType = 'contract'
+
+interface Template {
   id: string
-  name: string
+  type: TemplateType
+  title: string
+  name?: string
   content: string
+  richContent?: string
+  category?: string
   variables: string[]
-  category: string
+  metadata?: any
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -29,12 +32,10 @@ interface PaginationData {
   pages: number
 }
 
-export default function WhatsAppTemplatesPage() {
-  const [templates, setTemplates] = useState<WhatsAppTemplate[]>([])
+export default function ContractTemplatesPage() {
+  const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [showForm, setShowForm] = useState(false)
-  const [editingTemplate, setEditingTemplate] = useState<WhatsAppTemplate | null>(null)
   const [pagination, setPagination] = useState<PaginationData>({
     page: 1,
     limit: 10,
@@ -50,9 +51,10 @@ export default function WhatsAppTemplatesPage() {
         page: page.toString(),
         limit: pagination.limit.toString(),
         search: searchTerm,
+        type: 'contract',
       })
 
-      const response = await fetch(`/api/whatsapp-templates?${params}`)
+      const response = await fetch(`/api/templates?${params}`)
       const data = await response.json()
 
       if (response.ok) {
@@ -69,7 +71,7 @@ export default function WhatsAppTemplatesPage() {
   }
 
   useEffect(() => {
-    fetchTemplates()
+    fetchTemplates(1, search)
   }, [])
 
   const handleSearch = () => {
@@ -78,7 +80,7 @@ export default function WhatsAppTemplatesPage() {
 
   const handleDeleteTemplate = async (id: string) => {
     try {
-      const response = await fetch(`/api/whatsapp-templates/${id}`, {
+      const response = await fetch(`/api/templates/${id}`, {
         method: 'DELETE',
       })
 
@@ -95,49 +97,17 @@ export default function WhatsAppTemplatesPage() {
     }
   }
 
-  const handleEditTemplate = (template: WhatsAppTemplate) => {
-    setEditingTemplate(template)
-    setShowForm(true)
+  const handleEditTemplate = (template: Template) => {
+    router.push(`/dashboard/templates/${template.id}/edit`)
   }
 
   const handleNewTemplate = () => {
-    setEditingTemplate(null)
-    setShowForm(true)
-  }
-
-  const handleFormSubmit = async (data: any) => {
-    try {
-      const url = editingTemplate 
-        ? `/api/whatsapp-templates/${editingTemplate.id}`
-        : '/api/whatsapp-templates'
-      
-      const method = editingTemplate ? 'PUT' : 'POST'
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      })
-
-      if (response.ok) {
-        setShowForm(false)
-        setEditingTemplate(null)
-        fetchTemplates(pagination.page, search)
-      } else {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al guardar la plantilla')
-      }
-    } catch (error) {
-      console.error('Error saving template:', error)
-      throw error
-    }
+    router.push(`/dashboard/templates/new?type=contract`)
   }
 
   const handleToggleStatus = async (id: string, isActive: boolean) => {
     try {
-      const response = await fetch(`/api/whatsapp-templates/${id}`, {
+      const response = await fetch(`/api/templates/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -168,9 +138,9 @@ export default function WhatsAppTemplatesPage() {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Plantillas WhatsApp</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Plantillas de Contratos</h1>
           <p className="text-muted-foreground">
-            Administra las plantillas de mensajes automáticos para WhatsApp
+            Administra las plantillas de contratos con editor WYSIWYG
           </p>
         </div>
 
@@ -181,7 +151,7 @@ export default function WhatsAppTemplatesPage() {
               <CardTitle className="text-sm font-medium">
                 Total Plantillas
               </CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalTemplates}</div>
@@ -196,7 +166,7 @@ export default function WhatsAppTemplatesPage() {
               <CardTitle className="text-sm font-medium">
                 Plantillas Activas
               </CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
@@ -211,9 +181,9 @@ export default function WhatsAppTemplatesPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Lista de Plantillas</CardTitle>
+            <CardTitle>Plantillas de Contratos</CardTitle>
             <CardDescription>
-              Busca y administra las plantillas de mensajes WhatsApp
+              Busca y administra las plantillas de contratos con editor visual
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -234,20 +204,12 @@ export default function WhatsAppTemplatesPage() {
               <div className="flex items-center space-x-2">
                 <Button onClick={handleNewTemplate}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Nueva Plantilla
+                  Nueva Plantilla de Contrato
                 </Button>
               </div>
             </div>
 
-            <WhatsAppTemplatesTable
-              templates={templates}
-              onEdit={handleEditTemplate}
-              onDelete={handleDeleteTemplate}
-              onToggleStatus={handleToggleStatus}
-              isLoading={loading}
-            />
-
-            {pagination.pages > 1 && (
+                    {pagination.pages > 1 && (
               <div className="flex justify-center space-x-2 mt-4">
                 <Button
                   variant="outline"
@@ -270,21 +232,6 @@ export default function WhatsAppTemplatesPage() {
             )}
           </CardContent>
         </Card>
-
-        <Dialog open={showForm} onOpenChange={setShowForm}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
-                {editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla'}
-              </DialogTitle>
-            </DialogHeader>
-            <WhatsAppTemplateForm
-              initialData={editingTemplate || undefined}
-              onSubmit={handleFormSubmit}
-              isLoading={false}
-            />
-          </DialogContent>
-        </Dialog>
       </div>
     </DashboardLayout>
   )

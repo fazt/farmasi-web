@@ -29,6 +29,7 @@ interface Guarantee {
   id: string
   name: string
   value: number
+  status: 'ACTIVE' | 'USED' | 'INACTIVE'
   createdAt: Date
   _count: {
     loans: number
@@ -88,6 +89,7 @@ export function GuaranteesTable({
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Valor</TableHead>
+              <TableHead>Estado</TableHead>
               <TableHead>Préstamos</TableHead>
               <TableHead>Contratos</TableHead>
               <TableHead>Fecha Registro</TableHead>
@@ -98,6 +100,19 @@ export function GuaranteesTable({
             {guarantees.map((guarantee) => {
               const canDelete = guarantee._count.loans === 0 && guarantee._count.contracts === 0
 
+              const getStatusBadge = (status: string) => {
+                switch (status) {
+                  case 'ACTIVE':
+                    return <Badge variant="default" className="bg-green-100 text-green-800">Disponible</Badge>
+                  case 'USED':
+                    return <Badge variant="secondary" className="bg-orange-100 text-orange-800">En Uso</Badge>
+                  case 'INACTIVE':
+                    return <Badge variant="outline" className="bg-gray-100 text-gray-800">Inactiva</Badge>
+                  default:
+                    return <Badge variant="secondary">{status}</Badge>
+                }
+              }
+
               return (
                 <TableRow key={guarantee.id}>
                   <TableCell className="font-medium max-w-[200px]">
@@ -107,6 +122,9 @@ export function GuaranteesTable({
                   </TableCell>
                   <TableCell className="font-medium">
                     {formatCurrency(guarantee.value)}
+                  </TableCell>
+                  <TableCell>
+                    {getStatusBadge(guarantee.status)}
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary">

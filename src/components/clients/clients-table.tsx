@@ -26,12 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+import { ClientDetailsDrawer } from './client-details-drawer'
 
 interface Client {
   id: string
@@ -201,102 +196,13 @@ export function ClientsTable({
         </AlertDialogContent>
       </AlertDialog>
 
-      <Sheet open={!!viewClient} onOpenChange={() => setViewClient(null)}>
-        <SheetContent side="right">
-          {viewClient && (
-            <>
-              <SheetHeader>
-                <SheetTitle>Información del Cliente</SheetTitle>
-              </SheetHeader>
-              
-              <div className="space-y-6 p-4">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold text-sm text-muted-foreground">Nombre Completo</h3>
-                    <div className="flex items-center space-x-3 mt-2">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="text-lg font-semibold bg-blue-100 text-blue-700">
-                          {getInitials(viewClient.firstName, viewClient.lastName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <p className="text-lg font-medium">{`${viewClient.firstName} ${viewClient.lastName}`}</p>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold text-sm text-muted-foreground">Email</h3>
-                    <p>{viewClient.email || 'No registrado'}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold text-sm text-muted-foreground">Teléfono</h3>
-                    <p>{viewClient.phone || 'No registrado'}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold text-sm text-muted-foreground">Documento</h3>
-                    {viewClient.documentType && viewClient.documentNumber ? (
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Badge variant="outline">
-                          {viewClient.documentType}
-                        </Badge>
-                        <span>{viewClient.documentNumber}</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">No registrado</span>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold text-sm text-muted-foreground">Préstamos Activos</h3>
-                    <Badge 
-                      variant="default" 
-                      className="bg-green-500 text-white hover:bg-green-600 cursor-pointer transition-colors"
-                      onClick={() => {
-                        router.push(`/dashboard/loans?clientId=${viewClient.id}`)
-                        setViewClient(null)
-                      }}
-                    >
-                      {viewClient._count.loans} préstamo(s)
-                    </Badge>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold text-sm text-muted-foreground">Fecha de Registro</h3>
-                    <p>{format(new Date(viewClient.createdAt), 'dd/MM/yyyy', {
-                      locale: es,
-                    })}</p>
-                  </div>
-                </div>
-                
-                <div className="flex space-x-2 pt-4 border-t">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => {
-                      onEdit(viewClient)
-                      setViewClient(null)
-                    }}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => {
-                      onView(viewClient)
-                      setViewClient(null)
-                    }}
-                  >
-                    Ver Detalles
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      <ClientDetailsDrawer
+        client={viewClient}
+        isOpen={!!viewClient}
+        onClose={() => setViewClient(null)}
+        onEdit={onEdit}
+        onViewDetails={onView}
+      />
     </>
   )
 }

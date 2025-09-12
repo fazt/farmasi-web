@@ -1,5 +1,5 @@
 {
-  "name": "farmasi-web",
+  "name": "grupo-ascona-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -32,6 +32,8 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-toast": "^1.2.15",
+    "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tiptap/extension-color": "^3.4.1",
     "@tiptap/extension-text-align": "^3.4.1",

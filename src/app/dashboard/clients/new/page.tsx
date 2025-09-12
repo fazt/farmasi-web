@@ -91,48 +91,48 @@ export default function NewClientPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="personal" className="w-full">
+              <Tabs defaultValue="required" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="personal" className="flex items-center gap-2">
+                  <TabsTrigger value="required" className="flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    Información Personal
+                    Información Requerida
                   </TabsTrigger>
-                  <TabsTrigger value="documents" className="flex items-center gap-2">
+                  <TabsTrigger value="extra" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    Documentos y Contacto
+                    Información Extra
                   </TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="personal" className="mt-6">
+                <TabsContent value="required" className="mt-6">
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-lg font-medium">Datos Personales</h3>
+                      <h3 className="text-lg font-medium">Información Requerida</h3>
                       <p className="text-sm text-muted-foreground">
-                        Información básica del cliente. Los campos marcados con (*) son obligatorios.
+                        Datos básicos necesarios para el registro del cliente. Los campos marcados con (*) son obligatorios.
                       </p>
                     </div>
                     <ClientForm
                       onSubmit={handleCreateClient}
                       isLoading={isSubmitting}
                       formId="client-form"
-                      section="personal"
+                      section="required"
                     />
                   </div>
                 </TabsContent>
                 
-                <TabsContent value="documents" className="mt-6">
+                <TabsContent value="extra" className="mt-6">
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-lg font-medium">Documentos y Contacto</h3>
+                      <h3 className="text-lg font-medium">Información Extra</h3>
                       <p className="text-sm text-muted-foreground">
-                        Información de contacto y documentos de identificación del cliente.
+                        Información adicional y de contacto del cliente (opcional).
                       </p>
                     </div>
                     <ClientForm
                       onSubmit={handleCreateClient}
                       isLoading={isSubmitting}
                       formId="client-form"
-                      section="documents"
+                      section="extra"
                     />
                   </div>
                 </TabsContent>

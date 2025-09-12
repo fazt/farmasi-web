@@ -15,7 +15,7 @@ export default async function InterestRatesPage() {
       }
     },
     orderBy: {
-      createdAt: 'desc'
+      loanAmount: 'asc'
     },
     take: 10
   })

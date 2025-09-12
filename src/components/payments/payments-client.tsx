@@ -63,7 +63,7 @@ interface PaymentStats {
   total: {
     amount: number
     count: number
-    average: number
+    profit: number
   }
   today: {
     amount: number
@@ -226,16 +226,39 @@ export function PaymentsClient({
       return
     }
 
-    const data = payments.map(payment => ({
-      'Fecha': new Date(payment.paymentDate).toLocaleDateString('es-PE'),
-      'Cliente': `${payment.loan.client.firstName} ${payment.loan.client.lastName}`,
-      'Teléfono': payment.loan.client.phone || 'N/A',
-      'Email': payment.loan.client.email || 'N/A',
-      'Monto': Number(payment.amount),
-      'Préstamo ID': payment.loan.id,
-      'Estado Préstamo': payment.loan.status,
-      'Semana': getWeekNumber(new Date(payment.paymentDate))
-    }))
+    const data = payments.map(payment => {
+      const loanAmount = Number(payment.loan.amount)
+      const totalAmount = Number(payment.loan.totalAmount)
+      const profit = totalAmount - loanAmount
+      
+      return {
+        'Fecha': new Date(payment.paymentDate).toLocaleDateString('es-PE'),
+        'Cliente': `${payment.loan.client.firstName} ${payment.loan.client.lastName}`,
+        'Teléfono': payment.loan.client.phone || 'N/A',
+        'Email': payment.loan.client.email || 'N/A',
+        'Monto Pago': Number(payment.amount),
+        'Monto Préstamo': loanAmount,
+        'Total a Pagar': totalAmount,
+        'Ganancia por Préstamo': profit,
+        'Estado Préstamo': payment.loan.status,
+        'Semana': getWeekNumber(new Date(payment.paymentDate))
+      }
+    })
+
+    // Add summary row with total profit
+    const totalProfit = data.reduce((sum, row) => sum + row['Ganancia por Préstamo'], 0)
+    data.push({
+      'Fecha': '',
+      'Cliente': '',
+      'Teléfono': '',
+      'Email': '',
+      'Monto Pago': '',
+      'Monto Préstamo': '',
+      'Total a Pagar': 'TOTAL GANANCIAS:',
+      'Ganancia por Préstamo': totalProfit,
+      'Estado Préstamo': '',
+      'Semana': ''
+    })
 
     const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
@@ -266,18 +289,42 @@ export function PaymentsClient({
       doc.text(`Grupo ${selectedGroup} (Semana ${selectedGroup})`, 14, 32)
     }
     
+    // Calculate total profit first
+    const totalProfit = payments.reduce((sum, payment) => {
+      const loanAmount = Number(payment.loan.amount)
+      const totalAmount = Number(payment.loan.totalAmount)
+      return sum + (totalAmount - loanAmount)
+    }, 0)
+
     // Preparar datos para la tabla
-    const tableData = payments.map(payment => [
-      new Date(payment.paymentDate).toLocaleDateString('es-PE'),
-      `${payment.loan.client.firstName} ${payment.loan.client.lastName}`,
-      payment.loan.client.phone || 'N/A',
-      formatCurrency(Number(payment.amount)),
-      payment.loan.status
-    ])
+    const tableData = payments.map(payment => {
+      const loanAmount = Number(payment.loan.amount)
+      const totalAmount = Number(payment.loan.totalAmount)
+      const profit = totalAmount - loanAmount
+      
+      return [
+        new Date(payment.paymentDate).toLocaleDateString('es-PE'),
+        `${payment.loan.client.firstName} ${payment.loan.client.lastName}`,
+        payment.loan.client.phone || 'N/A',
+        formatCurrency(Number(payment.amount)),
+        formatCurrency(profit),
+        payment.loan.status
+      ]
+    })
+
+    // Add total row - ensure tableData is an array
+    if (Array.isArray(tableData)) {
+      tableData.push([
+        '', '', '', 'TOTAL GANANCIAS:', formatCurrency(totalProfit), ''
+      ])
+    } else {
+      console.error('tableData is not an array:', tableData)
+      return
+    }
     
     // Agregar tabla
     (doc as any).autoTable({
-      head: [['Fecha', 'Cliente', 'Teléfono', 'Monto', 'Estado']],
+      head: [['Fecha', 'Cliente', 'Teléfono', 'Monto Pago', 'Ganancia', 'Estado']],
       body: tableData,
       startY: selectedGroup ? 40 : 30,
       styles: { fontSize: 8 },
@@ -293,75 +340,83 @@ export function PaymentsClient({
 
   return (
     <div className="space-y-6">
-      {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Recaudado
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {statsLoading ? '...' : formatCurrency(stats.total.amount)}
+      {/* Statistics Cards - New Design */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <div className="relative overflow-hidden rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Recaudado
+              </p>
+              <div className="text-xl font-bold text-green-600">
+                {statsLoading ? '...' : formatCurrency(stats.total.amount)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {statsLoading ? '...' : `${stats.total.count} pagos totales`}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {statsLoading ? '...' : `${stats.total.count} pagos registrados`}
-            </p>
-          </CardContent>
-        </Card>
+            <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/20">
+              <DollarSign className="h-5 w-5 text-green-600" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pagos de Hoy
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {statsLoading ? '...' : formatCurrency(stats.today.amount)}
+        <div className="relative overflow-hidden rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">
+                Pagos de Hoy
+              </p>
+              <div className="text-xl font-bold">
+                {statsLoading ? '...' : formatCurrency(stats.today.amount)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {statsLoading ? '...' : `${stats.today.count} transacciones`}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {statsLoading ? '...' : `${stats.today.count} pago(s) hoy`}
-            </p>
-          </CardContent>
-        </Card>
+            <div className="rounded-full bg-blue-100 p-3 dark:bg-blue-900/20">
+              <Calendar className="h-5 w-5 text-blue-600" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Esta Semana
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {statsLoading ? '...' : formatCurrency(stats.week.amount)}
+        <div className="relative overflow-hidden rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">
+                Esta Semana
+              </p>
+              <div className="text-xl font-bold">
+                {statsLoading ? '...' : formatCurrency(stats.week.amount)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {statsLoading ? '...' : `${stats.week.count} pagos`}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Recaudado esta semana
-            </p>
-          </CardContent>
-        </Card>
+            <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900/20">
+              <TrendingUp className="h-5 w-5 text-purple-600" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pago Promedio
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {statsLoading ? '...' : formatCurrency(stats.total.average)}
+        <div className="relative overflow-hidden rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">
+                Ganancias Totales
+              </p>
+              <div className="text-xl font-bold text-green-600">
+                {statsLoading ? '...' : formatCurrency(stats.total.profit)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                De préstamos pagados
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Por transacción
-            </p>
-          </CardContent>
-        </Card>
+            <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/20">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+            </div>
+          </div>
+        </div>
       </div>
 
       <Card>

@@ -1,6 +1,6 @@
-### Farmasi
+### Grupo Ascona
 
-Farmasi es una aplicacion que ayuda a una empresa que hace  
+Grupo Ascona es una aplicacion que ayuda a una empresa que hace  
 prestamos personales. 
 
 Caracteristicas principales:
@@ -51,7 +51,7 @@ Caracteristicas principales:
 
 ### Caracteristicas de Tasas de Interes:
 
-Explicacion de como funcionan los prestamos personales en Farmasi:
+Explicacion de como funcionan los prestamos personales en Grupo Ascona:
 - El cliente puede solicitar un prestamo por montos establecidos y que en plazos de cada 6 semanas se pague un cuota, por ejemplo:
 -  de 500 soles, se paga 105 soles cada 6 semanas.
 - de 600 soles, se paga 110 soles cada 6 semanas.

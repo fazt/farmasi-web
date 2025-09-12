@@ -93,8 +93,7 @@ export function ClientsPageClient({ initialClients, initialPagination }: Clients
   }
 
   const handleViewClient = (client: Client) => {
-    // TODO: Implement client detail view
-    console.log('View client:', client)
+    router.push(`/dashboard/clients/${client.id}`)
   }
 
   const handleNewClient = () => {

@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
+    const includeLoans = searchParams.get('includeLoans') === 'true'
 
     const skip = (page - 1) * limit
 
@@ -31,19 +32,36 @@ export async function GET(request: NextRequest) {
         }
       : {}
 
+    const includeOptions = includeLoans 
+      ? {
+          loans: {
+            where: { status: 'ACTIVE' },
+            include: {
+              interestRate: true,
+              guarantee: true,
+            },
+          },
+          _count: {
+            select: {
+              loans: true,
+            },
+          },
+        }
+      : {
+          _count: {
+            select: {
+              loans: true,
+            },
+          },
+        }
+
     const [clients, total] = await Promise.all([
       prisma.client.findMany({
         where,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: {
-          _count: {
-            select: {
-              loans: true,
-            },
-          },
-        },
+        include: includeOptions,
       }),
       prisma.client.count({ where }),
     ])

@@ -21,6 +21,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form'
+import { PhotoUpload } from '@/components/ui/photo-upload'
 import { guaranteeSchema, type GuaranteeFormData } from '@/lib/validations/guarantee'
 
 interface GuaranteeFormProps {
@@ -36,7 +37,8 @@ export function GuaranteeForm({ initialData, onSubmit, isLoading, formId }: Guar
     defaultValues: {
       name: initialData?.name || '',
       value: initialData?.value || 0,
-      photos: [],
+      description: initialData?.description || '',
+      photos: initialData?.photos || [],
     },
   })
 
@@ -99,6 +101,49 @@ export function GuaranteeForm({ initialData, onSubmit, isLoading, formId }: Guar
                 </FormControl>
                 <FormDescription>
                   Valor estimado de la garantía en soles
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Descripción</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Ej: Toyota Yaris color blanco, año 2018, placa ABC-123. Estado de conservación bueno, con algunos rayones menores..."
+                    className="min-h-[100px] resize-none"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormDescription>
+                  Descripción detallada de la garantía (opcional)
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="photos"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fotos de la Garantía</FormLabel>
+                <FormControl>
+                  <PhotoUpload
+                    photos={field.value || []}
+                    onPhotosChange={field.onChange}
+                    maxPhotos={5}
+                    disabled={isLoading}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Agregue fotos de la garantía para su documentación (máximo 5 fotos)
                 </FormDescription>
                 <FormMessage />
               </FormItem>

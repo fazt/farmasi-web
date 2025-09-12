@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { addWeeks } from 'date-fns'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -85,11 +78,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const body = await request.json()
     const { clientId, interestRateId, guaranteeId } = body
@@ -111,6 +99,11 @@ export async function POST(request: NextRequest) {
 
     if (!guarantee) {
       return NextResponse.json({ error: 'Garantía no encontrada' }, { status: 404 })
+    }
+
+    // Check if guarantee is already in use
+    if (guarantee.status === 'USED') {
+      return NextResponse.json({ error: 'Esta garantía ya está siendo utilizada en otro préstamo' }, { status: 400 })
     }
 
     // Check if client has any active loans
@@ -157,7 +150,11 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Note: Guarantee is now linked to loan, no status field needed
+      // Mark guarantee as used
+      await tx.guarantee.update({
+        where: { id: guaranteeId },
+        data: { status: 'USED' },
+      })
 
       return newLoan
     })

@@ -155,6 +155,7 @@ export default function EditGuaranteePage({ params }: EditGuaranteePageProps) {
               initialData={guarantee}
               onSubmit={handleUpdateGuarantee}
               isLoading={isSubmitting}
+              formId="guarantee-form"
             />
             <div className="flex justify-end space-x-4 mt-6 pt-6 border-t">
               <Button
@@ -163,6 +164,14 @@ export default function EditGuaranteePage({ params }: EditGuaranteePageProps) {
                 disabled={isSubmitting}
               >
                 Cancelar
+              </Button>
+              <Button
+                type="submit"
+                form="guarantee-form"
+                disabled={isSubmitting}
+                className="bg-[#FF5B67] hover:bg-[#FF4755] text-white"
+              >
+                {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
               </Button>
             </div>
           </CardContent>

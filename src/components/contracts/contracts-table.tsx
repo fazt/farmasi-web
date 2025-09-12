@@ -29,8 +29,8 @@ interface Contract {
   id: string
   startDate: Date
   endDate: Date
-  amount: number
-  interest: number
+  amount: number | string
+  interest: number | string
   installments: number
   status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
   signature?: string | null
@@ -44,14 +44,14 @@ interface Contract {
   }
   loan: {
     id: string
-    amount: number
-    weeklyPayment: number
-    totalAmount: number
+    amount: number | string
+    weeklyPayment?: number | string
+    totalAmount?: number | string
     status: string
-    interestRate: {
+    interestRate?: {
       weeksCount: number
     }
-    payments: any[]
+    payments?: any[]
   }
   guarantee: {
     id: string
@@ -94,15 +94,16 @@ export function ContractsTable({
     }
   }
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | string) => {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value
     return new Intl.NumberFormat('es-PE', {
       style: 'currency',
       currency: 'PEN',
-    }).format(value)
+    }).format(numValue || 0)
   }
 
   const getContractProgress = (contract: Contract) => {
-    const totalPayments = contract.loan.payments.length
+    const totalPayments = contract.loan.payments?.length || 0
     const totalInstallments = contract.installments
     return (totalPayments / totalInstallments) * 100
   }
@@ -140,7 +141,9 @@ export function ContractsTable({
             {contracts.map((contract) => {
               const statusInfo = statusLabels[contract.status]
               const progress = getContractProgress(contract)
-              const totalAmount = contract.amount + contract.interest
+              const amount = typeof contract.amount === 'string' ? parseFloat(contract.amount) : contract.amount
+              const interest = typeof contract.interest === 'string' ? parseFloat(contract.interest) : contract.interest
+              const totalAmount = amount + interest
 
               return (
                 <TableRow key={contract.id}>
@@ -153,7 +156,7 @@ export function ContractsTable({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{formatCurrency(contract.amount)}</div>
+                    <div className="font-medium">{formatCurrency(amount)}</div>
                     <div className="text-xs text-muted-foreground">
                       Capital inicial
                     </div>
@@ -161,13 +164,13 @@ export function ContractsTable({
                   <TableCell>
                     <div className="font-medium">{formatCurrency(totalAmount)}</div>
                     <div className="text-xs text-muted-foreground">
-                      + {formatCurrency(contract.interest)} interés
+                      + {formatCurrency(interest)} interés
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="font-medium">{contract.installments}</div>
                     <div className="text-xs text-muted-foreground">
-                      {formatCurrency(contract.loan.weeklyPayment)}/sem
+                      {contract.loan.weeklyPayment ? formatCurrency(contract.loan.weeklyPayment) : 'N/A'}/sem
                     </div>
                   </TableCell>
                   <TableCell>
@@ -187,7 +190,7 @@ export function ContractsTable({
                         />
                       </div>
                       <div className="text-xs text-center font-medium">
-                        {contract.loan.payments.length}/{contract.installments}
+                        {contract.loan.payments?.length || 0}/{contract.installments}
                       </div>
                     </div>
                   </TableCell>

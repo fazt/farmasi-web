@@ -20,8 +20,8 @@ interface Contract {
   id: string
   startDate: Date
   endDate: Date
-  amount: number
-  interest: number
+  amount: number | string
+  interest: number | string
   installments: number
   status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
   signature?: string | null
@@ -35,14 +35,14 @@ interface Contract {
   }
   loan: {
     id: string
-    amount: number
-    weeklyPayment: number
-    totalAmount: number
+    amount: number | string
+    weeklyPayment?: number | string
+    totalAmount?: number | string
     status: string
-    interestRate: {
+    interestRate?: {
       weeksCount: number
     }
-    payments: any[]
+    payments?: any[]
   }
   guarantee: {
     id: string
@@ -70,6 +70,7 @@ export default function ContractsPage() {
     pages: 0,
   })
   const router = useRouter()
+  console.log(contracts)
 
   const fetchContracts = async (page = 1, searchTerm = '', status = '') => {
     try {
@@ -139,8 +140,34 @@ export default function ContractsPage() {
     console.log('View contract:', contract)
   }
 
-  const handleDownloadPDF = (contract: Contract) => {
-    window.open(`/api/contracts/${contract.id}/pdf`, '_blank')
+  const handleDownloadPDF = async (contract: Contract) => {
+    try {
+      // Fetch the HTML content from the API
+      const response = await fetch(`/api/contracts/${contract.id}/pdf`)
+      
+      if (!response.ok) {
+        throw new Error('Error al generar el contrato')
+      }
+      
+      const htmlContent = await response.text()
+      
+      // Create a new window with the HTML content for PDF generation
+      const printWindow = window.open('', '_blank')
+      if (printWindow) {
+        printWindow.document.write(htmlContent)
+        printWindow.document.close()
+        
+        // Wait for content to load, then trigger print dialog
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print()
+          }, 100)
+        }
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error)
+      alert('Error al generar el PDF del contrato')
+    }
   }
 
   const handleSendEmail = (contract: Contract) => {

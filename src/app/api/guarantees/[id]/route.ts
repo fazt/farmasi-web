@@ -1,34 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { guaranteeSchema } from '@/lib/validations/guarantee'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { id } = await params
 
     const guarantee = await prisma.guarantee.findUnique({
       where: { id },
       include: {
-        loans: {
-          include: {
-            client: true,
-          },
-        },
-        contracts: {
-          include: {
-            client: true,
-            loan: true,
+        photos: true,
+        _count: {
+          select: {
+            loans: true,
+            contracts: true,
           },
         },
       },
@@ -53,22 +40,48 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { id } = await params
     const body = await request.json()
-    const validatedData = guaranteeSchema.parse(body)
+    const { name, value, description } = body
 
-    const guarantee = await prisma.guarantee.update({
-      where: { id },
-      data: validatedData,
+    // Validate required fields
+    if (!name || name.length < 2) {
+      return NextResponse.json({ error: 'El nombre debe tener al menos 2 caracteres' }, { status: 400 })
+    }
+    
+    if (!value || value <= 0) {
+      return NextResponse.json({ error: 'El valor debe ser mayor a 0' }, { status: 400 })
+    }
+
+    // Check if guarantee exists
+    const existingGuarantee = await prisma.guarantee.findUnique({
+      where: { id }
     })
 
-    return NextResponse.json(guarantee)
+    if (!existingGuarantee) {
+      return NextResponse.json({ error: 'Garantía no encontrada' }, { status: 404 })
+    }
+
+    // Update guarantee
+    const updatedGuarantee = await prisma.guarantee.update({
+      where: { id },
+      data: {
+        name,
+        value: Number(value),
+        description: description || null,
+      },
+      include: {
+        photos: true,
+        _count: {
+          select: {
+            loans: true,
+            contracts: true,
+          },
+        },
+      },
+    })
+
+    return NextResponse.json(updatedGuarantee)
   } catch (error) {
     console.error('Error updating guarantee:', error)
     return NextResponse.json(
@@ -83,29 +96,44 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { id } = await params
 
-    // Check if guarantee is being used by any loans or contracts
-    const [loansCount, contractsCount] = await Promise.all([
-      prisma.loan.count({ where: { guaranteeId: id } }),
-      prisma.contract.count({ where: { guaranteeId: id } })
-    ])
+    // Check if guarantee exists
+    const guarantee = await prisma.guarantee.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            loans: true,
+            contracts: true,
+          },
+        },
+      },
+    })
 
-    if (loansCount > 0 || contractsCount > 0) {
+    if (!guarantee) {
+      return NextResponse.json({ error: 'Garantía no encontrada' }, { status: 404 })
+    }
+
+    // Check if guarantee is being used
+    if (guarantee._count.loans > 0 || guarantee._count.contracts > 0) {
       return NextResponse.json(
-        { error: 'No se puede eliminar una garantía que está siendo utilizada por préstamos o contratos' },
+        { error: 'No se puede eliminar una garantía que está siendo utilizada' },
         { status: 400 }
       )
     }
 
-    await prisma.guarantee.delete({
-      where: { id },
+    // Delete guarantee and its photos
+    await prisma.$transaction(async (tx) => {
+      // Delete photos first
+      await tx.guaranteePhoto.deleteMany({
+        where: { guaranteeId: id },
+      })
+
+      // Delete guarantee
+      await tx.guarantee.delete({
+        where: { id },
+      })
     })
 
     return NextResponse.json({ message: 'Garantía eliminada correctamente' })

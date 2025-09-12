@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Edit, Trash2, ToggleLeft, ToggleRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -45,6 +45,9 @@ interface InterestRatesTableProps {
   isLoading?: boolean
 }
 
+type SortColumn = 'loanAmount' | 'weeklyPayment' | 'weeksCount' | 'totalPayment' | 'interestRate' | 'status' | 'loans' | 'createdAt'
+type SortDirection = 'asc' | 'desc'
+
 export function InterestRatesTable({
   interestRates,
   onEdit,
@@ -53,6 +56,8 @@ export function InterestRatesTable({
   isLoading,
 }: InterestRatesTableProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [sortColumn, setSortColumn] = useState<SortColumn>('loanAmount')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   const handleDelete = () => {
     if (deleteId) {
@@ -76,6 +81,72 @@ export function InterestRatesTable({
     return `S/. ${num.toFixed(2)}`
   }
 
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }
+
+  const sortedRates = [...interestRates].sort((a, b) => {
+    let aValue: any
+    let bValue: any
+
+    switch (sortColumn) {
+      case 'loanAmount':
+        aValue = Number(a.loanAmount)
+        bValue = Number(b.loanAmount)
+        break
+      case 'weeklyPayment':
+        aValue = Number(a.weeklyPayment)
+        bValue = Number(b.weeklyPayment)
+        break
+      case 'weeksCount':
+        aValue = Number(a.weeksCount)
+        bValue = Number(b.weeksCount)
+        break
+      case 'totalPayment':
+        aValue = calculateTotalPayment(a.weeklyPayment, a.weeksCount)
+        bValue = calculateTotalPayment(b.weeklyPayment, b.weeksCount)
+        break
+      case 'interestRate':
+        aValue = calculateInterestRate(a.loanAmount, calculateTotalPayment(a.weeklyPayment, a.weeksCount))
+        bValue = calculateInterestRate(b.loanAmount, calculateTotalPayment(b.weeklyPayment, b.weeksCount))
+        break
+      case 'status':
+        aValue = a.isActive ? 1 : 0
+        bValue = b.isActive ? 1 : 0
+        break
+      case 'loans':
+        aValue = a._count.loans
+        bValue = b._count.loans
+        break
+      case 'createdAt':
+        aValue = new Date(a.createdAt).getTime()
+        bValue = new Date(b.createdAt).getTime()
+        break
+      default:
+        return 0
+    }
+
+    if (sortDirection === 'asc') {
+      return aValue > bValue ? 1 : -1
+    } else {
+      return aValue < bValue ? 1 : -1
+    }
+  })
+
+  const SortIcon = ({ column }: { column: SortColumn }) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-3 w-3 opacity-50" />
+    }
+    return sortDirection === 'asc' ? 
+      <ArrowUp className="h-3 w-3" /> : 
+      <ArrowDown className="h-3 w-3" />
+  }
+
   if (isLoading) {
     return <div className="text-center py-8">Cargando tasas de interés...</div>
   }
@@ -94,19 +165,83 @@ export function InterestRatesTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Monto Préstamo</TableHead>
-              <TableHead>Pago Semanal</TableHead>
-              <TableHead>Semanas</TableHead>
-              <TableHead>Total a Pagar</TableHead>
-              <TableHead>Tasa Interés</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Préstamos</TableHead>
-              <TableHead>Fecha Creación</TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('loanAmount')}
+              >
+                <div className="flex items-center gap-1">
+                  Monto Préstamo
+                  <SortIcon column="loanAmount" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('weeklyPayment')}
+              >
+                <div className="flex items-center gap-1">
+                  Pago Semanal
+                  <SortIcon column="weeklyPayment" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('weeksCount')}
+              >
+                <div className="flex items-center gap-1">
+                  Semanas
+                  <SortIcon column="weeksCount" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('totalPayment')}
+              >
+                <div className="flex items-center gap-1">
+                  Total a Pagar
+                  <SortIcon column="totalPayment" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('interestRate')}
+              >
+                <div className="flex items-center gap-1">
+                  Tasa Interés
+                  <SortIcon column="interestRate" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('status')}
+              >
+                <div className="flex items-center gap-1">
+                  Estado
+                  <SortIcon column="status" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('loans')}
+              >
+                <div className="flex items-center gap-1">
+                  Préstamos
+                  <SortIcon column="loans" />
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => handleSort('createdAt')}
+              >
+                <div className="flex items-center gap-1">
+                  Fecha Creación
+                  <SortIcon column="createdAt" />
+                </div>
+              </TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {interestRates.map((rate) => {
+            {sortedRates.map((rate) => {
               const totalPayment = calculateTotalPayment(rate.weeklyPayment, rate.weeksCount)
               const interestRate = calculateInterestRate(rate.loanAmount, totalPayment)
               
